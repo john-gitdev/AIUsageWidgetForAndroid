@@ -82,7 +82,8 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="#2a2a2a"
-                android:padding="16dp">
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -102,6 +103,39 @@
 
                 <Spinner
                     android:id="@+id/spinner_interval"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="#363636"
+                    android:padding="8dp"
+                    android:popupBackground="#363636"/>
+            </LinearLayout>
+
+            <!-- Tap Action -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#2a2a2a"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Widget Tap Action"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="What happens when you tap the main body of the widget."
+                    android:textColor="#808080"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="12dp"/>
+
+                <Spinner
+                    android:id="@+id/spinner_tap_action"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:background="#363636"

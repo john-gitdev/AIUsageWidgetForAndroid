@@ -45,9 +45,10 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
 
             // ---- Tap widget body ----
             val isError = prefs.getString("session_pct", "--") == "Error"
+            val tapAction = prefs.getString("tap_action", "refresh")
             
-            if (isError) {
-                // Open app to login
+            if (isError || tapAction == "open_app") {
+                // Open app
                 val openAppIntent = Intent(context, MainActivity::class.java).apply {
                     action = Intent.ACTION_MAIN
                     addCategory(Intent.CATEGORY_LAUNCHER)
@@ -105,7 +106,9 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
                 ))
                 val prefs = context.getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
                 val isError = prefs.getString("session_pct", "--") == "Error"
-                if (isError) {
+                val tapAction = prefs.getString("tap_action", "refresh")
+
+                if (isError || tapAction == "open_app") {
                     val openAppIntent = Intent(context, MainActivity::class.java).apply {
                         action = Intent.ACTION_MAIN
                         addCategory(Intent.CATEGORY_LAUNCHER)

@@ -87,6 +87,30 @@ class MainActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
+        // ---- Tap Action Spinner ----
+        val tapOptions = listOf("Refresh Status" to "refresh", "Open App" to "open_app")
+        val tapSpinner = findViewById<Spinner>(R.id.spinner_tap_action)
+        val tapLabels = tapOptions.map { it.first }
+        val tapAdapter = ArrayAdapter(this, R.layout.spinner_item, tapLabels)
+        tapAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        tapSpinner.adapter = tapAdapter
+
+        val currentTapAction = sharedPrefs.getString("tap_action", "refresh")
+        val tapSelectedIndex = tapOptions.indexOfFirst { it.second == currentTapAction }.coerceAtLeast(0)
+        tapSpinner.setSelection(tapSelectedIndex)
+
+        tapSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val newAction = tapOptions[position].second
+                if (newAction != currentTapAction) {
+                    sharedPrefs.edit().putString("tap_action", newAction).apply()
+                    // Update widgets immediately so the new tap action is applied
+                    ClaudeWidgetProvider.updateAllWidgets(this@MainActivity)
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
         // ---- Re-login button ----
         findViewById<View>(R.id.btn_relogin).setOnClickListener {
             // Clear cookies and show login again
