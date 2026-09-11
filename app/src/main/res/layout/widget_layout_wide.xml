@@ -32,8 +32,8 @@
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:text="Session"
-                android:textColor="#B0B0B0"
-                android:textSize="10sp"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
                 android:maxLines="1"/>
             <TextView
                 android:id="@+id/tv_session_pct"
@@ -42,7 +42,7 @@
                 android:text="--"
                 android:textStyle="bold"
                 android:textColor="#FFFFFF"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:maxLines="1"/>
         </LinearLayout>
         <ProgressBar
@@ -72,8 +72,8 @@
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:text="Weekly"
-                android:textColor="#B0B0B0"
-                android:textSize="10sp"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
                 android:maxLines="1"/>
             <TextView
                 android:id="@+id/tv_weekly_pct"
@@ -82,7 +82,7 @@
                 android:text="--"
                 android:textStyle="bold"
                 android:textColor="#FFFFFF"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:maxLines="1"/>
         </LinearLayout>
         <ProgressBar
