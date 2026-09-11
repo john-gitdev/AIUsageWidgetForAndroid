@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Login WebView -->
+    <LinearLayout
+        android:id="@+id/loadingLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:text="Please log in below. The app will automatically save your session cookie for the widget."
+            android:textSize="14sp"
+            android:background="#eeeeee"
+            android:textColor="#333333"/>
+
+        <WebView
+            android:id="@+id/webView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </LinearLayout>
+
+    <!-- Success + Settings -->
+    <ScrollView
+        android:id="@+id/successLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#1a1a1a"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✓"
+                android:textSize="48sp"
+                android:textColor="#4CAF50"
+                android:layout_marginTop="40dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Login Successful!"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:layout_marginTop="16dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Add the widget to your home screen and tap refresh."
+                android:textAlignment="center"
+                android:textColor="#B0B0B0"
+                android:textSize="14sp"/>
+
+            <!-- Settings Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Settings"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:layout_marginTop="48dp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Auto Refresh Interval -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#2a2a2a"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Auto Refresh Interval"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="How often the widget automatically updates usage data."
+                    android:textColor="#808080"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="12dp"/>
+
+                <Spinner
+                    android:id="@+id/spinner_interval"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="#363636"
+                    android:padding="8dp"
+                    android:popupBackground="#363636"/>
+            </LinearLayout>
+
+            <!-- Re-login button -->
+            <TextView
+                android:id="@+id/btn_relogin"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center"
+                android:text="Re-login to Claude"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:background="#D4511E"
+                android:layout_marginTop="24dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>
