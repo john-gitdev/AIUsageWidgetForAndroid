@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root_frame"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -17,6 +18,15 @@
             android:textSize="14sp"
             android:background="#eeeeee"
             android:textColor="#333333"/>
+
+        <TextView
+            android:id="@+id/errorText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:textColor="#FF0000"
+            android:textStyle="bold"
+            android:visibility="gone" />
 
         <WebView
             android:id="@+id/webView"

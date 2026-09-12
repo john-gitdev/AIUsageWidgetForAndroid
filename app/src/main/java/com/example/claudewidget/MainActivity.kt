@@ -38,6 +38,9 @@ class MainActivity : AppCompatActivity() {
         sharedPrefs = getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
         webView = findViewById(R.id.webView)
         loginDetected = false
+        
+        // Enable WebView debugging for Chrome DevTools
+        WebView.setWebContentsDebuggingEnabled(true)
 
         // Check if user is already logged in (has cookies)
         val existingCookies = sharedPrefs.getString("saved_cookies", null)
@@ -128,7 +131,7 @@ class MainActivity : AppCompatActivity() {
             useWideViewPort = true
             loadWithOverviewMode = true
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            setSupportMultipleWindows(false)
+            setSupportMultipleWindows(true)
             javaScriptCanOpenWindowsAutomatically = true
 
             val defaultAgent = userAgentString
@@ -136,38 +139,132 @@ class MainActivity : AppCompatActivity() {
         }
 
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
-        webView.webChromeClient = WebChromeClient()
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onCreateWindow(
+                view: WebView?,
+                isDialog: Boolean,
+                isUserGesture: Boolean,
+                resultMsg: android.os.Message?
+            ): Boolean {
+                val newWebView = WebView(this@MainActivity)
+                newWebView.settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    setSupportMultipleWindows(true)
+                    javaScriptCanOpenWindowsAutomatically = true
+                    val defaultAgent = userAgentString
+                    userAgentString = defaultAgent.replace("; wv", "")
+                }
+                
+                newWebView.webChromeClient = object : WebChromeClient() {
+                    override fun onCloseWindow(window: WebView?) {
+                        findViewById<android.widget.FrameLayout>(R.id.root_frame).removeView(newWebView)
+                    }
+                }
+                newWebView.webViewClient = WebViewClient() // Allows URLs to load inside the popup instead of external browser
+                
+                val params = android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                findViewById<android.widget.FrameLayout>(R.id.root_frame).addView(newWebView, params)
+                
+                val transport = resultMsg?.obj as? WebView.WebViewTransport
+                transport?.webView = newWebView
+                resultMsg?.sendToTarget()
+                return true
+            }
+
+            override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
+                val msg = "JS Console: ${consoleMessage?.message()} -- line ${consoleMessage?.lineNumber()}"
+                Log.e("ClaudeWidget", msg)
+                val text = consoleMessage?.message() ?: ""
+                if ((text.contains("error", ignoreCase = true) || text.contains("failed", ignoreCase = true)) 
+                    && !text.contains("Permissions-Policy", ignoreCase = true)) {
+                    logErrorToScreen(msg)
+                }
+                return super.onConsoleMessage(consoleMessage)
+            }
+        }
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onReceivedError(
+                view: WebView?,
+                request: android.webkit.WebResourceRequest?,
+                error: android.webkit.WebResourceError?
+            ) {
+                super.onReceivedError(view, request, error)
+                val msg = "WebView Error: code ${error?.errorCode}, description ${error?.description}, url ${request?.url}"
+                Log.e("ClaudeWidget", msg)
+                if (request?.isForMainFrame == true) {
+                    logErrorToScreen(msg)
+                }
+            }
+
+            override fun onReceivedHttpError(
+                view: WebView?,
+                request: android.webkit.WebResourceRequest?,
+                errorResponse: android.webkit.WebResourceResponse?
+            ) {
+                super.onReceivedHttpError(view, request, errorResponse)
+                val msg = "WebView HTTP Error: status ${errorResponse?.statusCode}, url ${request?.url}"
+                Log.e("ClaudeWidget", msg)
+                if (request?.isForMainFrame == true) {
+                    logErrorToScreen(msg)
+                }
+            }
+
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-
-                if (loginDetected) return
-
-                Log.d("ClaudeWidget", "Page finished: $url")
-
-                val cookies = CookieManager.getInstance().getCookie("https://claude.ai")
-
-                if (cookies != null
-                    && cookies.contains("sessionKey=")
-                    && !cookies.contains("sessionKey=;")
-                    && !cookies.contains("sessionKey=deleted")) {
-
-                    loginDetected = true
-                    Log.d("ClaudeWidget", "Login detected! Saving cookies.")
-
-                    sharedPrefs.edit()
-                        .putString("saved_cookies", cookies)
-                        .putString("user_agent", view?.settings?.userAgentString)
-                        .apply()
-
-                    runOnUiThread { showSuccessScreen() }
-
-                    UpdateWidgetWorker.enqueueWork(this@MainActivity)
-                }
+                checkLoginCookies(view)
+            }
+            
+            override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                super.doUpdateVisitedHistory(view, url, isReload)
+                checkLoginCookies(view)
             }
         }
 
         webView.loadUrl("https://claude.ai/login")
+        startCookiePolling()
+    }
+
+    private val loginCheckHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val loginCheckRunnable = object : Runnable {
+        override fun run() {
+            if (!loginDetected) {
+                checkLoginCookies(webView)
+                loginCheckHandler.postDelayed(this, 1000)
+            }
+        }
+    }
+
+    private fun startCookiePolling() {
+        loginCheckHandler.removeCallbacks(loginCheckRunnable)
+        loginCheckHandler.post(loginCheckRunnable)
+    }
+
+    private fun checkLoginCookies(view: WebView?) {
+        if (loginDetected) return
+        val cookies = CookieManager.getInstance().getCookie("https://claude.ai")
+        if (cookies != null && cookies.contains("sessionKey=") && !cookies.contains("sessionKey=;") && !cookies.contains("sessionKey=deleted")) {
+            loginDetected = true
+            Log.d("ClaudeWidget", "Login detected! Saving cookies.")
+            sharedPrefs.edit()
+                .putString("saved_cookies", cookies)
+                .putString("user_agent", view?.settings?.userAgentString)
+                .apply()
+            runOnUiThread { showSuccessScreen() }
+            UpdateWidgetWorker.enqueueWork(this@MainActivity)
+        }
+    }
+
+    private fun logErrorToScreen(msg: String) {
+        runOnUiThread {
+            val errorText = findViewById<android.widget.TextView>(R.id.errorText)
+            errorText.visibility = View.VISIBLE
+            val currentText = errorText.text.toString()
+            errorText.text = if (currentText.isEmpty()) msg else "$currentText\n$msg"
+        }
     }
 }
