@@ -3,120 +3,159 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:padding="12dp"
-    android:background="@drawable/widget_bg"
-    android:gravity="center_vertical">
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:padding="16dp"
+    android:background="@drawable/widget_bg">
 
-    <!-- Claude icon -->
-    <ImageView
-        android:layout_width="16dp"
-        android:layout_height="16dp"
-        android:src="@drawable/ic_claude"
-        android:layout_marginEnd="8dp"/>
-
-    <!-- Session block -->
+    <!-- Header row -->
     <LinearLayout
-        android:layout_width="0dp"
-        android:layout_weight="1"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginEnd="8dp">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_claude" />
+        
+        <RelativeLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content">
             <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Session"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:maxLines="1"/>
-            <TextView
-                android:id="@+id/tv_session_pct"
+                android:id="@+id/tv_claude"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="--"
+                android:text="Claude"
                 android:textStyle="bold"
                 android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:maxLines="1"/>
-        </LinearLayout>
-        <ProgressBar
-            android:id="@+id/pb_session"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="6dp"
-            android:progressDrawable="@drawable/custom_progress_bar"
-            android:max="100"
-            android:progress="0"/>
-    </LinearLayout>
-
-    <!-- Weekly block -->
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_weight="1"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginEnd="8dp">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+                android:layout_marginStart="8dp"
+                android:textSize="18sp"
+                android:maxLines="1" />
             <TextView
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Weekly"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:maxLines="1"/>
-            <TextView
-                android:id="@+id/tv_weekly_pct"
+                android:id="@+id/tv_last_update"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="--"
-                android:textStyle="bold"
+                android:layout_toEndOf="@id/tv_claude"
+                android:layout_alignBaseline="@id/tv_claude"
+                android:text="- Not yet refreshed"
                 android:textColor="#FFFFFF"
-                android:textSize="12sp"
+                android:layout_marginStart="6dp"
+                android:textSize="10sp"
                 android:maxLines="1"/>
-        </LinearLayout>
-        <ProgressBar
-            android:id="@+id/pb_weekly"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="6dp"
-            android:progressDrawable="@drawable/custom_progress_bar"
-            android:max="100"
-            android:progress="0"/>
+        </RelativeLayout>
+
+        <ImageView
+            android:id="@+id/btn_refresh"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_refresh" />
     </LinearLayout>
 
-    <!-- Refresh icon -->
-    <ImageView
-        android:id="@+id/btn_refresh"
-        android:layout_width="16dp"
-        android:layout_height="16dp"
-        android:src="@drawable/ic_refresh" />
-
-    <!-- Hidden text views needed by the provider (not shown in wide mode) -->
     <TextView
-        android:id="@+id/tv_last_update"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:visibility="gone"/>
+        android:layout_weight="1"/>
+
+    <!-- Session label row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Session"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:maxLines="1" />
+        <TextView
+            android:id="@+id/tv_session_pct"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <!-- Session progress bar -->
+    <ProgressBar
+        android:id="@+id/pb_session"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:progressDrawable="@drawable/custom_progress_bar"
+        android:max="100"
+        android:progress="0"
+        android:layout_marginTop="4dp"/>
+
+    <!-- Session reset text -->
     <TextView
         android:id="@+id/tv_session_reset"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:visibility="gone"/>
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tap refresh"
+        android:textColor="#FFFFFF"
+        android:textSize="10sp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginTop="2dp"
+        android:maxLines="1"/>
+
+    <!-- Weekly label row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Weekly"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:maxLines="1" />
+        <TextView
+            android:id="@+id/tv_weekly_pct"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <!-- Weekly progress bar -->
+    <ProgressBar
+        android:id="@+id/pb_weekly"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:progressDrawable="@drawable/custom_progress_bar"
+        android:max="100"
+        android:progress="0"
+        android:layout_marginTop="4dp"/>
+
+    <!-- Weekly reset text -->
     <TextView
         android:id="@+id/tv_weekly_reset"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tap refresh"
+        android:textColor="#FFFFFF"
+        android:textSize="10sp"
+        android:layout_marginTop="2dp"
+        android:maxLines="1"/>
+
+    <TextView
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:visibility="gone"/>
+        android:layout_weight="1"/>
 
 </LinearLayout>

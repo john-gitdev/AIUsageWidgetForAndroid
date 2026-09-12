@@ -27,8 +27,9 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
         fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             // Choose layout based on widget height
             val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
             val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
-            val layoutId = if (minHeight < 80) R.layout.widget_layout_wide else R.layout.widget_layout
+            val layoutId = if (minWidth >= 180 || minHeight < 80) R.layout.widget_layout_wide else R.layout.widget_layout
 
             val views = RemoteViews(context.packageName, layoutId)
             val prefs = context.getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
@@ -91,8 +92,9 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
             val ids = mgr.getAppWidgetIds(ComponentName(context, ClaudeWidgetProvider::class.java))
             for (id in ids) {
                 val options = mgr.getAppWidgetOptions(id)
+                val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
                 val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
-                val layoutId = if (minHeight < 80) R.layout.widget_layout_wide else R.layout.widget_layout
+                val layoutId = if (minWidth >= 180 || minHeight < 80) R.layout.widget_layout_wide else R.layout.widget_layout
 
                 val views = RemoteViews(context.packageName, layoutId)
 

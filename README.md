@@ -8,7 +8,7 @@ An Android home screen widget that tracks and displays your real-time [Claude AP
 
 ## Features
 - **Real-Time Usage Tracking**: Displays your current Session limit usage and Weekly limit usage natively on your Android home screen.
-- **Responsive Widget Layouts**: Automatically switches between a compact vertical layout (optimized for 2x2 up to 4x4) and a horizontal wide layout (optimized for 3x1 and 4x1) depending on how you resize it.
+- **Responsive Widget Layouts**: Automatically switches between a compact vertical layout and a horizontal wide layout depending on how you resize it. The widget is optimized for **2x2** and **4x2** sizes (with 2x2 being the default).
 - **Auto-Refresh Integration**: Configurable background sync (via Android `WorkManager`) allows you to automatically fetch new usage data every 15m, 30m, 1h, 2h, 4h, or set it to "Never" for manual-only refreshes.
 - **Instant Manual Refresh**: Tapping anywhere on the widget instantly triggers a one-shot sync and provides immediate "Refreshing..." visual feedback.
 - **Smart Error Redirect**: If your session expires or encounters a network error, tapping the widget will automatically open the app so you can log back in.
