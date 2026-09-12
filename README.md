@@ -12,7 +12,12 @@ An Android home screen widget that tracks and displays your real-time [Claude AP
 - **Auto-Refresh Integration**: Configurable background sync (via Android `WorkManager`) allows you to automatically fetch new usage data every 15m, 30m, 1h, 2h, 4h, or set it to "Never" for manual-only refreshes.
 - **Instant Manual Refresh**: Tapping anywhere on the widget instantly triggers a one-shot sync and provides immediate "Refreshing..." visual feedback.
 - **Smart Error Redirect**: If your session expires or encounters a network error, tapping the widget will automatically open the app so you can log back in.
-- **Cloudflare & Google Auth Bypass**: Leverages a secure, in-app `WebView` for Google OAuth login. It dynamically extracts the required cookies (`cf_clearance`, `sessionKey`) and exact `User-Agent` to silently authenticate background API requests, fully bypassing Cloudflare's strict 403 Forbidden bot protection.
+- **Cloudflare & Google Auth Bypass**: Leverages a secure, in-app `WebView` for Google OAuth login. It dynamically extracts the required cookies (`cf_clearance`, `sessionKey`) and exact `User-Agent` to silently authenticate background API requests. Features a custom multi-window popup implementation to natively support Google Sign-In and smart session polling for instant login detection on Single Page Applications.
+
+## Privacy & Security (Open Source)
+Because this app requires you to log in to your Claude account (which may have access to billing or private conversations), **security and trust are paramount.** 
+- **100% Open Source:** The entire codebase is public. You are encouraged to audit the code (specifically `MainActivity.kt` and `UpdateWidgetWorker.kt`) to verify exactly how your credentials and cookies are handled.
+- **No Third-Party Servers:** Your cookies and session data are stored **only** locally on your device using Android's private `SharedPreferences`. The app communicates *directly* with `claude.ai` to fetch your usage. It does not send your data, telemetry, or credentials anywhere else.
 
 ## Installation
 1. Clone this repository:
