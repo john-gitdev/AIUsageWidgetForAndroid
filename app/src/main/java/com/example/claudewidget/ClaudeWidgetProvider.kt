@@ -49,14 +49,9 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
             val tapAction = prefs.getString("tap_action", "refresh")
             
             if (isError || tapAction == "open_app") {
-                // Open app
-                val openAppIntent = Intent(context, MainActivity::class.java).apply {
-                    action = Intent.ACTION_MAIN
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
+                // Open app to Claude tab
                 val openAppPending = PendingIntent.getActivity(
-                    context, 1, openAppIntent,
+                    context, 1, MainActivity.openTabIntent(context, "claude"),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 views.setOnClickPendingIntent(R.id.widget_root, openAppPending)
@@ -113,13 +108,8 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
                 val tapAction = prefs.getString("tap_action", "refresh")
 
                 if (isError || tapAction == "open_app") {
-                    val openAppIntent = Intent(context, MainActivity::class.java).apply {
-                        action = Intent.ACTION_MAIN
-                        addCategory(Intent.CATEGORY_LAUNCHER)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
                     views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(
-                        context, 1, openAppIntent,
+                        context, 1, MainActivity.openTabIntent(context, "claude"),
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     ))
                 } else {

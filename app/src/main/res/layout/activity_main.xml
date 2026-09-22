@@ -38,6 +38,20 @@
             android:textColor="#888888"
             android:background="#222222"
             android:layout_marginStart="4dp"/>
+
+        <!-- Opens the in-app log -->
+        <TextView
+            android:id="@+id/tab_log"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:paddingHorizontal="16dp"
+            android:text="Log"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#888888"
+            android:background="#222222"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
     <FrameLayout
@@ -71,10 +85,34 @@
                 android:textStyle="bold"
                 android:visibility="gone" />
 
-            <WebView
-                android:id="@+id/webView"
+            <!-- One browser per service, so Claude and ChatGPT never share a page, popup or login check.
+                 Only the current tab's browser is visible. Google sign-in popups open inside it. -->
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <FrameLayout
+                    android:id="@+id/browser_claude"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+                    <WebView
+                        android:id="@+id/webView_claude"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/browser_chatgpt"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone">
+                    <WebView
+                        android:id="@+id/webView_chatgpt"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                </FrameLayout>
+            </FrameLayout>
         </LinearLayout>
 
         <!-- Success + Settings -->
@@ -95,6 +133,7 @@
                 android:gravity="center_horizontal">
 
                 <TextView
+                    android:id="@+id/tv_success_icon"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="✓"

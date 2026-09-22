@@ -125,7 +125,9 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
         }
     }
 
-    private fun setClaudeErrorState(message: String) {
+    /** Shows [message] on the Claude widget and records [detail] in the in-app log. */
+    private fun setClaudeErrorState(message: String, detail: String, error: Throwable? = null) {
+        AppLog.e(applicationContext, "Claude", detail, error)
         val prefs = applicationContext.getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
         prefs.edit()
             .putString("session_pct", "Error")
@@ -138,7 +140,9 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
         ClaudeWidgetProvider.updateAllWidgets(applicationContext)
     }
 
-    private fun setChatGptErrorState(message: String) {
+    /** Shows [message] on the ChatGPT widget and records [detail] in the in-app log. */
+    private fun setChatGptErrorState(message: String, detail: String, error: Throwable? = null) {
+        AppLog.e(applicationContext, "ChatGPT", detail, error)
         val prefs = applicationContext.getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
         prefs.edit()
             .putString("chatgpt_session_pct", "Error")
@@ -149,6 +153,12 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             .putInt("chatgpt_weekly_prog", 0)
             .apply()
         ChatGptWidgetProvider.updateAllWidgets(applicationContext)
+    }
+
+    /** "HTTP 403: <start of body>" for the log. Only used for failed calls, whose bodies are error messages. */
+    private fun httpSummary(code: Int, body: String?): String {
+        val snippet = body?.replace(Regex("\\s+"), " ")?.trim()?.take(160)
+        return if (snippet.isNullOrEmpty()) "HTTP $code" else "HTTP $code: $snippet"
     }
 
     private fun nowTimestamp(): String {
@@ -205,20 +215,21 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .build()
 
             val orgResponse = client.newCall(orgRequest).execute()
+            val orgBody = orgResponse.body?.string()
             if (orgResponse.code == 401 || orgResponse.code == 403) {
-                setClaudeErrorState("Session expired — tap to log in")
+                setClaudeErrorState("Session expired — tap to log in",
+                    "Organizations request rejected (${httpSummary(orgResponse.code, orgBody)})")
                 return false
             }
-
-            val orgBody = orgResponse.body?.string()
             if (!orgResponse.isSuccessful || orgBody.isNullOrEmpty()) {
-                setClaudeErrorState("Server error — tap refresh")
+                setClaudeErrorState("Server error — tap refresh",
+                    "Organizations request failed (${httpSummary(orgResponse.code, orgBody)})")
                 return false
             }
 
             val orgArray = JSONArray(orgBody)
             if (orgArray.length() == 0) {
-                setClaudeErrorState("No org found")
+                setClaudeErrorState("No org found", "Organizations request returned no organizations")
                 return false
             }
             val orgId = orgArray.getJSONObject(0).getString("uuid")
@@ -233,14 +244,15 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .build()
 
             val usageResponse = client.newCall(usageRequest).execute()
+            val usageBody = usageResponse.body?.string()
             if (usageResponse.code == 401 || usageResponse.code == 403) {
-                setClaudeErrorState("Session expired — tap to log in")
+                setClaudeErrorState("Session expired — tap to log in",
+                    "Usage request rejected (${httpSummary(usageResponse.code, usageBody)})")
                 return false
             }
-
-            val usageBody = usageResponse.body?.string()
             if (!usageResponse.isSuccessful || usageBody.isNullOrEmpty()) {
-                setClaudeErrorState("Server error — tap refresh")
+                setClaudeErrorState("Server error — tap refresh",
+                    "Usage request failed (${httpSummary(usageResponse.code, usageBody)})")
                 return false
             }
 
@@ -285,12 +297,11 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .apply()
 
             ClaudeWidgetProvider.updateAllWidgets(applicationContext)
-            Log.d(TAG, "Claude Widget updated successfully!")
+            AppLog.i(applicationContext, "Claude", "Updated: session $sessionPct, weekly $weeklyPct")
             return true
 
         } catch (e: Exception) {
-            Log.e(TAG, "Claude worker exception", e)
-            setClaudeErrorState("Network error — tap refresh")
+            setClaudeErrorState("Network error — tap refresh", "Refresh failed", e)
             return false
         }
     }
@@ -314,7 +325,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
         }
 
         if (currentToken.isNullOrEmpty()) {
-            setChatGptErrorState("Tap widget to log in")
+            setChatGptErrorState("Tap widget to log in", "No access token, and the saved session couldn't get a new one")
             return false
         }
 
@@ -325,8 +336,10 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
 
             // If 401 and we have cookies, attempt token refresh once
             if (usageResponse.code == 401 && !cookies.isNullOrEmpty()) {
+                AppLog.i(applicationContext, "ChatGPT", "Access token rejected (HTTP 401), getting a new one")
                 val refreshedToken = refreshChatGptToken(client, cookies, chatGptUa)
                 if (!refreshedToken.isNullOrEmpty()) {
+                    usageResponse.close()
                     currentToken = refreshedToken
                     prefs.edit().putString("chatgpt_access_token", refreshedToken).apply()
                     usageRequest = buildChatGptRequest(currentToken, chatGptUa, cookies)
@@ -334,14 +347,15 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 }
             }
 
+            val body = usageResponse.body?.string()
             if (usageResponse.code == 401 || usageResponse.code == 403) {
-                setChatGptErrorState("Session expired — tap to log in")
+                setChatGptErrorState("Session expired — tap to log in",
+                    "Usage request rejected (${httpSummary(usageResponse.code, body)})")
                 return false
             }
-
-            val body = usageResponse.body?.string()
             if (!usageResponse.isSuccessful || body.isNullOrEmpty()) {
-                setChatGptErrorState("Server error — tap refresh")
+                setChatGptErrorState("Server error — tap refresh",
+                    "Usage request failed (${httpSummary(usageResponse.code, body)})")
                 return false
             }
 
@@ -387,12 +401,11 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .apply()
 
             ChatGptWidgetProvider.updateAllWidgets(applicationContext)
-            Log.d(TAG, "ChatGPT Widget updated successfully: session=$sessionPct, weekly=$weeklyPct")
+            AppLog.i(applicationContext, "ChatGPT", "Updated: session $sessionPct, weekly $weeklyPct")
             return true
 
         } catch (e: Exception) {
-            Log.e(TAG, "ChatGPT worker exception", e)
-            setChatGptErrorState("Network error — tap refresh")
+            setChatGptErrorState("Network error — tap refresh", "Refresh failed", e)
             return false
         }
     }
@@ -425,11 +438,16 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 val json = JSONObject(body)
                 val token = json.optString("accessToken", "")
                 if (token.isNotEmpty()) {
+                    AppLog.i(applicationContext, "ChatGPT", "Got a new access token from the saved session")
                     return token
                 }
+                // A logged-out session answers 200 with no accessToken
+                AppLog.w(applicationContext, "ChatGPT", "Saved session has no access token (logged out or expired)")
+            } else {
+                AppLog.w(applicationContext, "ChatGPT", "Session request failed (${httpSummary(resp.code, body)})")
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to refresh ChatGPT token", e)
+            AppLog.w(applicationContext, "ChatGPT", "Session request failed", e)
         }
         return null
     }

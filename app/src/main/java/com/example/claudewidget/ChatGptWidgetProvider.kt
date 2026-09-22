@@ -50,14 +50,8 @@ class ChatGptWidgetProvider : AppWidgetProvider() {
 
             if (isError || tapAction == "open_app") {
                 // Open app to ChatGPT tab
-                val openAppIntent = Intent(context, MainActivity::class.java).apply {
-                    action = Intent.ACTION_MAIN
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    putExtra("target_tab", "chatgpt")
-                }
                 val openAppPending = PendingIntent.getActivity(
-                    context, 11, openAppIntent,
+                    context, 11, MainActivity.openTabIntent(context, "chatgpt"),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 views.setOnClickPendingIntent(R.id.widget_root, openAppPending)
@@ -114,14 +108,8 @@ class ChatGptWidgetProvider : AppWidgetProvider() {
                 val tapAction = prefs.getString("tap_action", "refresh")
 
                 if (isError || tapAction == "open_app") {
-                    val openAppIntent = Intent(context, MainActivity::class.java).apply {
-                        action = Intent.ACTION_MAIN
-                        addCategory(Intent.CATEGORY_LAUNCHER)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        putExtra("target_tab", "chatgpt")
-                    }
                     views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(
-                        context, 11, openAppIntent,
+                        context, 11, MainActivity.openTabIntent(context, "chatgpt"),
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     ))
                 } else {

@@ -11,7 +11,8 @@ Android home screen widgets that track and display your real-time [Claude](https
 - **Responsive Widget Layouts**: Automatically switches between a compact vertical layout and a horizontal wide layout depending on how you resize it. The widget is optimized for **2x2** and **4x2** sizes (with 2x2 being the default).
 - **Auto-Refresh Integration**: Configurable background sync (via Android `WorkManager`) allows you to automatically fetch new usage data every 15m, 30m, 1h, 2h, 4h, or set it to "Never" for manual-only refreshes.
 - **Instant Manual Refresh**: Tapping anywhere on the widget instantly triggers a one-shot sync and provides immediate "Refreshing..." visual feedback.
-- **Smart Error Redirect**: If your session expires or encounters a network error, tapping the widget will automatically open the app so you can log back in.
+- **Smart Error Redirect**: If your session expires or encounters a network error, tapping the widget opens the app on that service's tab so you can log back in.
+- **Error Log**: Tap **Log** at the top of the app to see recent refreshes, errors, and logins (newest first). You can copy it to share when reporting a problem.
 - **Cloudflare & Google Auth Bypass**: Leverages a secure, in-app `WebView` for Google OAuth login. It dynamically extracts the required cookies (`cf_clearance`, `sessionKey`) and exact `User-Agent` to silently authenticate background API requests. Features a custom multi-window popup implementation to natively support Google Sign-In and smart session polling for instant login detection on Single Page Applications.
 
 ## Privacy & Security (Open Source)
