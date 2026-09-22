@@ -1,6 +1,6 @@
-# Claude API Usage Widget
+# AI Usage Widget
 
-An Android home screen widget that tracks and displays your real-time [Claude API](https://console.anthropic.com/) usage and remaining limits.
+Android home screen widgets that track and display your real-time [Claude](https://claude.ai/) and [ChatGPT](https://chatgpt.com/) usage and remaining limits.
 ### Widget Previews
 | 2x2 Compact Widget | 4x2 Wide Widget |
 | :---: | :---: |
@@ -15,9 +15,9 @@ An Android home screen widget that tracks and displays your real-time [Claude AP
 - **Cloudflare & Google Auth Bypass**: Leverages a secure, in-app `WebView` for Google OAuth login. It dynamically extracts the required cookies (`cf_clearance`, `sessionKey`) and exact `User-Agent` to silently authenticate background API requests. Features a custom multi-window popup implementation to natively support Google Sign-In and smart session polling for instant login detection on Single Page Applications.
 
 ## Privacy & Security (Open Source)
-Because this app requires you to log in to your Claude account (which may have access to billing or private conversations), **security and trust are paramount.** 
+Because this app requires you to log in to your Claude and/or ChatGPT account (which may have access to billing or private conversations), **security and trust are paramount.** 
 - **100% Open Source:** The entire codebase is public. You are encouraged to audit the code (specifically `MainActivity.kt` and `UpdateWidgetWorker.kt`) to verify exactly how your credentials and cookies are handled.
-- **No Third-Party Servers:** Your cookies and session data are stored **only** locally on your device using Android's private `SharedPreferences`. The app communicates *directly* with `claude.ai` to fetch your usage. It does not send your data, telemetry, or credentials anywhere else.
+- **No Third-Party Servers:** Your cookies and session data are stored **only** locally on your device using Android's private `SharedPreferences`. The app communicates *directly* with `claude.ai` and `chatgpt.com` to fetch your usage. It does not send your data, telemetry, or credentials anywhere else.
 
 ## Installation
 1. Clone this repository:
@@ -28,9 +28,9 @@ Because this app requires you to log in to your Claude account (which may have a
 3. Build the project and install the APK on your device.
 
 ## Usage
-1. Open the **Claude Widget** app from your app drawer.
-2. Log in using your Claude/Anthropic credentials (or Google OAuth) via the secure in-app browser.
-3. Once you see the "Login Successful" screen, go to your home screen and add the **Claude Widget**.
+1. Open the **AI Usage Widget** app from your app drawer.
+2. Pick the **Claude** or **ChatGPT** tab and log in (or use Google OAuth) via the secure in-app browser.
+3. Once you see the "Connected!" screen, go to your home screen and add the **Claude Widget** or **ChatGPT Widget**.
 4. You can re-open the app at any time to configure your **Auto Refresh Interval** or explicitly log out.
 
 ## Technical Notes

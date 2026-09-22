@@ -1,0 +1,161 @@
+package com.example.claudewidget
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.util.Log
+import android.widget.RemoteViews
+
+class ChatGptWidgetProvider : AppWidgetProvider() {
+
+    companion object {
+        private const val TAG = "ChatGptWidget"
+        const val ACTION_REFRESH_CHATGPT = "com.example.claudewidget.ACTION_REFRESH_CHATGPT"
+
+        fun updateAllWidgets(context: Context) {
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, ChatGptWidgetProvider::class.java))
+            for (id in ids) {
+                updateAppWidget(context, mgr, id)
+            }
+        }
+
+        fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
+            // Choose layout based on widget height
+            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
+            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
+            val layoutId = if (minWidth >= 180 || minHeight < 80) R.layout.chatgpt_widget_layout_wide else R.layout.chatgpt_widget_layout
+
+            val views = RemoteViews(context.packageName, layoutId)
+            val prefs = context.getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
+
+            // ---- Refresh button ----
+            val refreshIntent = Intent(context, ChatGptWidgetProvider::class.java).apply {
+                action = ACTION_REFRESH_CHATGPT
+            }
+            val refreshPending = PendingIntent.getBroadcast(
+                context, 10, refreshIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.btn_refresh, refreshPending)
+
+            // ---- Tap widget body ----
+            val isError = prefs.getString("chatgpt_session_pct", "--") == "Error"
+            val tapAction = prefs.getString("tap_action", "refresh")
+
+            if (isError || tapAction == "open_app") {
+                // Open app to ChatGPT tab
+                val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                    action = Intent.ACTION_MAIN
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    putExtra("target_tab", "chatgpt")
+                }
+                val openAppPending = PendingIntent.getActivity(
+                    context, 11, openAppIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_root, openAppPending)
+            } else {
+                // Refresh on body tap
+                val refreshIntent2 = Intent(context, ChatGptWidgetProvider::class.java).apply {
+                    action = ACTION_REFRESH_CHATGPT
+                }
+                val refreshPending2 = PendingIntent.getBroadcast(
+                    context, 12, refreshIntent2,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_root, refreshPending2)
+            }
+
+            // ---- Bind data ----
+            views.setTextViewText(R.id.tv_session_pct, prefs.getString("chatgpt_session_pct", "--"))
+            views.setTextViewText(R.id.tv_session_reset, prefs.getString("chatgpt_session_reset", "Tap refresh"))
+            views.setProgressBar(R.id.pb_session, 100, prefs.getInt("chatgpt_session_prog", 0), false)
+
+            views.setTextViewText(R.id.tv_weekly_pct, prefs.getString("chatgpt_weekly_pct", "--"))
+            views.setTextViewText(R.id.tv_weekly_reset, prefs.getString("chatgpt_weekly_reset", "Tap refresh"))
+            views.setProgressBar(R.id.pb_weekly, 100, prefs.getInt("chatgpt_weekly_prog", 0), false)
+
+            views.setTextViewText(R.id.tv_last_update, prefs.getString("chatgpt_last_update", "Not yet refreshed"))
+
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+
+        /** Show a "Refreshing..." state on the widget immediately */
+        fun showRefreshingState(context: Context) {
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, ChatGptWidgetProvider::class.java))
+            for (id in ids) {
+                val options = mgr.getAppWidgetOptions(id)
+                val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
+                val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
+                val layoutId = if (minWidth >= 180 || minHeight < 80) R.layout.chatgpt_widget_layout_wide else R.layout.chatgpt_widget_layout
+
+                val views = RemoteViews(context.packageName, layoutId)
+
+                // Keep click handlers
+                val refreshIntent = Intent(context, ChatGptWidgetProvider::class.java).apply {
+                    action = ACTION_REFRESH_CHATGPT
+                }
+                views.setOnClickPendingIntent(R.id.btn_refresh, PendingIntent.getBroadcast(
+                    context, 10, refreshIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                ))
+                val prefs = context.getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
+                val isError = prefs.getString("chatgpt_session_pct", "--") == "Error"
+                val tapAction = prefs.getString("tap_action", "refresh")
+
+                if (isError || tapAction == "open_app") {
+                    val openAppIntent = Intent(context, MainActivity::class.java).apply {
+                        action = Intent.ACTION_MAIN
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        putExtra("target_tab", "chatgpt")
+                    }
+                    views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(
+                        context, 11, openAppIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    ))
+                } else {
+                    val refreshIntent2 = Intent(context, ChatGptWidgetProvider::class.java).apply {
+                        action = ACTION_REFRESH_CHATGPT
+                    }
+                    views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getBroadcast(
+                        context, 12, refreshIntent2,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    ))
+                }
+
+                views.setTextViewText(R.id.tv_session_reset, "Refreshing...")
+                views.setTextViewText(R.id.tv_weekly_reset, "Refreshing...")
+                views.setTextViewText(R.id.tv_last_update, "Refreshing...")
+                mgr.updateAppWidget(id, views)
+            }
+        }
+    }
+
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        for (id in appWidgetIds) {
+            updateAppWidget(context, appWidgetManager, id)
+        }
+    }
+
+    override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) {
+        updateAppWidget(context, appWidgetManager, appWidgetId)
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (intent.action == ACTION_REFRESH_CHATGPT) {
+            Log.d(TAG, "ChatGPT Refresh tapped!")
+            showRefreshingState(context)
+            UpdateWidgetWorker.runNowChatGpt(context)
+        }
+    }
+}

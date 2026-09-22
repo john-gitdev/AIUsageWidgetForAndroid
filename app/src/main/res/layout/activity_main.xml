@@ -1,189 +1,235 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root_frame"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#1a1a1a">
 
-    <!-- Login WebView -->
+    <!-- Top Tab Bar -->
     <LinearLayout
-        android:id="@+id/loadingLayout"
+        android:id="@+id/tab_bar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:text="Please log in below. The app will automatically save your session cookie for the widget."
-            android:textSize="14sp"
-            android:background="#eeeeee"
-            android:textColor="#333333"/>
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:background="#121212"
+        android:padding="4dp">
 
         <TextView
-            android:id="@+id/errorText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:textColor="#FF0000"
+            android:id="@+id/tab_claude"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="Claude"
+            android:textSize="15sp"
             android:textStyle="bold"
-            android:visibility="gone" />
+            android:textColor="#FFFFFF"
+            android:background="#D4511E"/>
 
-        <WebView
-            android:id="@+id/webView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+        <TextView
+            android:id="@+id/tab_chatgpt"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="ChatGPT"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#888888"
+            android:background="#222222"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
-    <!-- Success + Settings -->
-    <ScrollView
-        android:id="@+id/successLayout"
+    <FrameLayout
+        android:id="@+id/root_frame"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#1a1a1a"
-        android:visibility="gone">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
+        <!-- Login WebView -->
         <LinearLayout
+            android:id="@+id/loadingLayout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="32dp"
-            android:gravity="center_horizontal">
-
+            android:layout_height="match_parent"
+            android:orientation="vertical">
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="✓"
-                android:textSize="48sp"
-                android:textColor="#4CAF50"
-                android:layout_marginTop="40dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Login Successful!"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:layout_marginTop="16dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Add the widget to your home screen and tap refresh."
-                android:textAlignment="center"
-                android:textColor="#B0B0B0"
-                android:textSize="14sp"/>
-
-            <!-- Settings Section -->
-            <TextView
+                android:id="@+id/tv_login_instructions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Settings"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:layout_marginTop="48dp"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- Auto Refresh Interval -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="#2a2a2a"
                 android:padding="16dp"
-                android:layout_marginBottom="16dp">
+                android:text="Please log in to Claude below. The app will automatically save your session cookie for the widget."
+                android:textSize="14sp"
+                android:background="#eeeeee"
+                android:textColor="#333333"/>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Auto Refresh Interval"
-                    android:textColor="#FFFFFF"
-                    android:textSize="15sp"
-                    android:layout_marginBottom="4dp"/>
+            <TextView
+                android:id="@+id/errorText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:textColor="#FF0000"
+                android:textStyle="bold"
+                android:visibility="gone" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="How often the widget automatically updates usage data."
-                    android:textColor="#808080"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="12dp"/>
+            <WebView
+                android:id="@+id/webView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </LinearLayout>
 
-                <Spinner
-                    android:id="@+id/spinner_interval"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:background="#363636"
-                    android:padding="8dp"
-                    android:popupBackground="#363636"/>
-            </LinearLayout>
+        <!-- Success + Settings -->
+        <ScrollView
+            android:id="@+id/successLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#1a1a1a"
+            android:visibility="gone">
 
-            <!-- Tap Action -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="#2a2a2a"
-                android:padding="16dp">
+                android:padding="32dp"
+                android:gravity="center_horizontal">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Widget Tap Action"
+                    android:text="✓"
+                    android:textSize="48sp"
+                    android:textColor="#4CAF50"
+                    android:layout_marginTop="24dp"/>
+
+                <TextView
+                    android:id="@+id/tv_success_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Claude Connected!"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
                     android:textColor="#FFFFFF"
-                    android:textSize="15sp"
-                    android:layout_marginBottom="4dp"/>
+                    android:layout_marginTop="16dp"/>
 
                 <TextView
+                    android:id="@+id/tv_success_subtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="What happens when you tap the main body of the widget."
-                    android:textColor="#808080"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="12dp"/>
+                    android:layout_marginTop="8dp"
+                    android:text="Add the Claude Widget to your home screen and tap refresh."
+                    android:textAlignment="center"
+                    android:textColor="#B0B0B0"
+                    android:textSize="14sp"/>
 
-                <Spinner
-                    android:id="@+id/spinner_tap_action"
+                <!-- Settings Section -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Settings"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginTop="36dp"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- Auto Refresh Interval -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#2a2a2a"
+                    android:padding="16dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Auto Refresh Interval"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="How often widgets automatically update usage data."
+                        android:textColor="#808080"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_interval"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="#363636"
+                        android:padding="8dp"
+                        android:popupBackground="#363636"/>
+                </LinearLayout>
+
+                <!-- Tap Action -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#2a2a2a"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Widget Tap Action"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="What happens when you tap the main body of a widget."
+                        android:textColor="#808080"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_tap_action"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="#363636"
+                        android:padding="8dp"
+                        android:popupBackground="#363636"/>
+                </LinearLayout>
+
+                <!-- Re-login button -->
+                <TextView
+                    android:id="@+id/btn_relogin"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:background="#363636"
-                    android:padding="8dp"
-                    android:popupBackground="#363636"/>
+                    android:gravity="center"
+                    android:text="Re-login to Claude"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:background="#D4511E"
+                    android:layout_marginTop="24dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Preserves your Google session for 1-tap sign-in"
+                    android:textColor="#808080"
+                    android:textSize="12sp"
+                    android:layout_marginTop="6dp"/>
+
+                <!-- Full Logout button -->
+                <TextView
+                    android:id="@+id/btn_full_logout"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:gravity="center"
+                    android:text="Log out completely (clear Google session)"
+                    android:textColor="#666666"
+                    android:textSize="13sp"
+                    android:layout_marginTop="16dp"/>
+
             </LinearLayout>
-
-            <!-- Re-login button -->
-            <TextView
-                android:id="@+id/btn_relogin"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:gravity="center"
-                android:text="Re-login to Claude"
-                android:textColor="#FFFFFF"
-                android:textSize="15sp"
-                android:background="#D4511E"
-                android:layout_marginTop="24dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Preserves your Google session for 1-tap sign-in"
-                android:textColor="#808080"
-                android:textSize="12sp"
-                android:layout_marginTop="6dp"/>
-
-            <!-- Full Logout button -->
-            <TextView
-                android:id="@+id/btn_full_logout"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:gravity="center"
-                android:text="Log out completely (clear Google session)"
-                android:textColor="#666666"
-                android:textSize="13sp"
-                android:layout_marginTop="16dp"/>
-
-        </LinearLayout>
-    </ScrollView>
-</FrameLayout>
+        </ScrollView>
+    </FrameLayout>
+</LinearLayout>

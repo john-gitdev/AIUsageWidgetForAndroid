@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Claude Widget"
+rootProject.name = "AI Usage Widget"
 include(":app")

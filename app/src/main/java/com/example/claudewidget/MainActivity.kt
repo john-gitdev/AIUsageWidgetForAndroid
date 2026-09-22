@@ -8,8 +8,11 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
+import android.widget.TextView
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebStorage
 import android.webkit.WebView
@@ -21,7 +24,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var sharedPrefs: SharedPreferences
     private var popupWebView: WebView? = null
-    private var loginDetected = false
+
+    @Volatile private var currentTab: String = "claude" // "claude" or "chatgpt"
+    private var claudeLoginDetected = false
+    @Volatile private var chatGptLoginDetected = false
 
     // Interval options: display label → minutes value
     private val intervalOptions = listOf(
@@ -39,28 +45,89 @@ class MainActivity : AppCompatActivity() {
 
         sharedPrefs = getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
         webView = findViewById(R.id.webView)
-        loginDetected = false
         
         // Enable WebView debugging for Chrome DevTools
         WebView.setWebContentsDebuggingEnabled(true)
         CookieManager.getInstance().setAcceptCookie(true)
 
-        // Check if user is already logged in (has cookies)
-        val existingCookies = sharedPrefs.getString("saved_cookies", null)
-        if (!existingCookies.isNullOrEmpty()) {
-            // Show success/settings screen directly
-            showSuccessScreen()
+        setupTabButtons()
+
+        val targetTab = intent.getStringExtra("target_tab")
+        if (targetTab == "chatgpt") {
+            switchTab("chatgpt")
         } else {
-            // Show login
-            showLoginScreen()
+            // Default to Claude, or ChatGPT if Claude is connected and ChatGPT is not
+            if (isClaudeLoggedIn() && !isChatGptLoggedIn()) {
+                switchTab("chatgpt")
+            } else {
+                switchTab("claude")
+            }
+        }
+    }
+
+    private fun isClaudeLoggedIn(): Boolean {
+        return !sharedPrefs.getString("saved_cookies", null).isNullOrEmpty()
+    }
+
+    private fun isChatGptLoggedIn(): Boolean {
+        val token = sharedPrefs.getString("chatgpt_access_token", null)
+        val cookies = sharedPrefs.getString("chatgpt_saved_cookies", null)
+        return !token.isNullOrEmpty() || !cookies.isNullOrEmpty()
+    }
+
+    private fun setupTabButtons() {
+        findViewById<TextView>(R.id.tab_claude).setOnClickListener {
+            switchTab("claude")
+        }
+        findViewById<TextView>(R.id.tab_chatgpt).setOnClickListener {
+            switchTab("chatgpt")
+        }
+    }
+
+    private fun switchTab(tab: String) {
+        currentTab = tab
+        val tabClaude = findViewById<TextView>(R.id.tab_claude)
+        val tabChatGpt = findViewById<TextView>(R.id.tab_chatgpt)
+
+        if (tab == "claude") {
+            tabClaude.setBackgroundColor(0xFFD4511E.toInt())
+            tabClaude.setTextColor(0xFFFFFFFF.toInt())
+            tabChatGpt.setBackgroundColor(0xFF222222.toInt())
+            tabChatGpt.setTextColor(0xFF888888.toInt())
+
+            if (isClaudeLoggedIn()) {
+                showSuccessScreen()
+            } else {
+                showLoginScreen()
+            }
+        } else {
+            tabChatGpt.setBackgroundColor(0xFF10A37F.toInt())
+            tabChatGpt.setTextColor(0xFFFFFFFF.toInt())
+            tabClaude.setBackgroundColor(0xFF222222.toInt())
+            tabClaude.setTextColor(0xFF888888.toInt())
+
+            if (isChatGptLoggedIn()) {
+                showSuccessScreen()
+            } else {
+                showLoginScreen()
+            }
         }
     }
 
     private fun showLoginScreen() {
-        loginDetected = false
         removePopupWebView()
         findViewById<View>(R.id.loadingLayout).visibility = View.VISIBLE
         findViewById<View>(R.id.successLayout).visibility = View.GONE
+
+        val instructions = findViewById<TextView>(R.id.tv_login_instructions)
+        if (currentTab == "claude") {
+            claudeLoginDetected = false
+            instructions.text = "Please log in to Claude below. The app will automatically save your session for the widget."
+        } else {
+            chatGptLoginDetected = false
+            instructions.text = "Please log in to ChatGPT below. The app will automatically save your session for the widget."
+        }
+
         setupWebView()
     }
 
@@ -69,6 +136,23 @@ class MainActivity : AppCompatActivity() {
         loginCheckHandler.removeCallbacks(loginCheckRunnable)
         findViewById<View>(R.id.loadingLayout).visibility = View.GONE
         findViewById<View>(R.id.successLayout).visibility = View.VISIBLE
+
+        val title = findViewById<TextView>(R.id.tv_success_title)
+        val subtitle = findViewById<TextView>(R.id.tv_success_subtitle)
+        val reloginBtn = findViewById<TextView>(R.id.btn_relogin)
+
+        if (currentTab == "claude") {
+            title.text = "Claude Connected!"
+            subtitle.text = "Add the Claude Widget to your home screen and tap refresh."
+            reloginBtn.text = "Re-login to Claude"
+            reloginBtn.setBackgroundColor(0xFFD4511E.toInt())
+        } else {
+            title.text = "ChatGPT Connected!"
+            subtitle.text = "Add the ChatGPT Widget to your home screen and tap refresh."
+            reloginBtn.text = "Re-login to ChatGPT"
+            reloginBtn.setBackgroundColor(0xFF10A37F.toInt())
+        }
+
         setupSettings()
     }
 
@@ -125,16 +209,13 @@ class MainActivity : AppCompatActivity() {
 
         for (url in targetUrls) {
             for (name in cookieNamesToClear) {
-                // Clear host-only
                 cookieManager.setCookie(url, "$name=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0")
-                // Clear across domain variations
                 for (domain in targetDomains) {
                     cookieManager.setCookie(url, "$name=; Domain=$domain; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0")
                 }
             }
         }
 
-        // Clear WebStorage (localStorage, IndexedDB) for Claude origins only (preserves Google storage)
         try {
             val webStorage = WebStorage.getInstance()
             webStorage.deleteOrigin("https://claude.ai")
@@ -142,6 +223,65 @@ class MainActivity : AppCompatActivity() {
             webStorage.deleteOrigin("https://anthropic.com")
         } catch (e: Exception) {
             Log.w("ClaudeWidget", "Failed to clear web storage for Claude", e)
+        }
+
+        cookieManager.flush()
+    }
+
+    private fun clearChatGptSession() {
+        val cookieManager = CookieManager.getInstance()
+        val targetUrls = listOf(
+            "https://chatgpt.com",
+            "https://chatgpt.com/",
+            "https://oaistatic.com",
+            "https://openai.com"
+        )
+        val targetDomains = listOf(
+            "chatgpt.com",
+            ".chatgpt.com",
+            "oaistatic.com",
+            ".oaistatic.com",
+            "openai.com",
+            ".openai.com"
+        )
+        val knownNames = setOf(
+            "__Secure-next-auth.session-token",
+            "next-auth.session-token",
+            "__Host-next-auth.csrf-token",
+            "cf_clearance",
+            "__cf_bm",
+            "oai-did",
+            "oai-nav-state"
+        )
+
+        val cookieNamesToClear = mutableSetOf<String>()
+        cookieNamesToClear.addAll(knownNames)
+
+        for (url in targetUrls) {
+            val cookieStr = cookieManager.getCookie(url) ?: continue
+            for (cookie in cookieStr.split(";")) {
+                val name = cookie.substringBefore("=").trim()
+                if (name.isNotEmpty()) {
+                    cookieNamesToClear.add(name)
+                }
+            }
+        }
+
+        for (url in targetUrls) {
+            for (name in cookieNamesToClear) {
+                cookieManager.setCookie(url, "$name=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0")
+                for (domain in targetDomains) {
+                    cookieManager.setCookie(url, "$name=; Domain=$domain; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0")
+                }
+            }
+        }
+
+        try {
+            val webStorage = WebStorage.getInstance()
+            webStorage.deleteOrigin("https://chatgpt.com")
+            webStorage.deleteOrigin("https://openai.com")
+        } catch (e: Exception) {
+            Log.w("ChatGptWidget", "Failed to clear web storage for ChatGPT", e)
         }
 
         cookieManager.flush()
@@ -155,7 +295,6 @@ class MainActivity : AppCompatActivity() {
         adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
         spinner.adapter = adapter
 
-        // Select the current saved interval
         val currentInterval = sharedPrefs.getLong("refresh_interval_minutes", 15L)
         val selectedIndex = intervalOptions.indexOfFirst { it.second == currentInterval }.coerceAtLeast(0)
         spinner.setSelection(selectedIndex)
@@ -188,23 +327,38 @@ class MainActivity : AppCompatActivity() {
                 val newAction = tapOptions[position].second
                 if (newAction != currentTapAction) {
                     sharedPrefs.edit().putString("tap_action", newAction).apply()
-                    // Update widgets immediately so the new tap action is applied
                     ClaudeWidgetProvider.updateAllWidgets(this@MainActivity)
+                    ChatGptWidgetProvider.updateAllWidgets(this@MainActivity)
                 }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // ---- Re-login button (clears Claude session, preserves Google account) ----
+        // ---- Re-login button (clears current service session, preserves Google account) ----
         findViewById<View>(R.id.btn_relogin).setOnClickListener {
-            sharedPrefs.edit().remove("saved_cookies").remove("user_agent").apply()
-            clearClaudeSession()
+            if (currentTab == "claude") {
+                sharedPrefs.edit().remove("saved_cookies").remove("user_agent").apply()
+                clearClaudeSession()
+            } else {
+                sharedPrefs.edit()
+                    .remove("chatgpt_access_token")
+                    .remove("chatgpt_saved_cookies")
+                    .remove("chatgpt_user_agent")
+                    .apply()
+                clearChatGptSession()
+            }
             showLoginScreen()
         }
 
-        // ---- Full Logout button (clears all cookies including Google) ----
+        // ---- Full Logout button (clears all cookies across everything including Google) ----
         findViewById<View>(R.id.btn_full_logout)?.setOnClickListener {
-            sharedPrefs.edit().remove("saved_cookies").remove("user_agent").apply()
+            sharedPrefs.edit()
+                .remove("saved_cookies")
+                .remove("user_agent")
+                .remove("chatgpt_access_token")
+                .remove("chatgpt_saved_cookies")
+                .remove("chatgpt_user_agent")
+                .apply()
             CookieManager.getInstance().removeAllCookies {
                 CookieManager.getInstance().flush()
                 runOnUiThread { showLoginScreen() }
@@ -229,6 +383,17 @@ class MainActivity : AppCompatActivity() {
 
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
+
+        // Add JS Bridge for ChatGPT token extraction
+        webView.addJavascriptInterface(object {
+            @android.webkit.JavascriptInterface
+            fun onChatGptToken(token: String?) {
+                if (!token.isNullOrEmpty() && currentTab == "chatgpt") {
+                    handleChatGptTokenReceived(token)
+                }
+            }
+        }, "AndroidBridge")
+
         webView.webChromeClient = object : WebChromeClient() {
             override fun onCreateWindow(
                 view: WebView?,
@@ -250,20 +415,20 @@ class MainActivity : AppCompatActivity() {
                 }
                 CookieManager.getInstance().setAcceptCookie(true)
                 CookieManager.getInstance().setAcceptThirdPartyCookies(newWebView, true)
-                
+
                 newWebView.webChromeClient = object : WebChromeClient() {
                     override fun onCloseWindow(window: WebView?) {
                         removePopupWebView()
                     }
                 }
-                newWebView.webViewClient = WebViewClient() // Allows URLs to load inside the popup instead of external browser
-                
+                newWebView.webViewClient = WebViewClient()
+
                 val params = android.widget.FrameLayout.LayoutParams(
                     android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
                     android.widget.FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 findViewById<android.widget.FrameLayout>(R.id.root_frame).addView(newWebView, params)
-                
+
                 val transport = resultMsg?.obj as? WebView.WebViewTransport
                 transport?.webView = newWebView
                 resultMsg?.sendToTarget()
@@ -272,64 +437,63 @@ class MainActivity : AppCompatActivity() {
 
             override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
                 val msg = "JS Console: ${consoleMessage?.message()} -- line ${consoleMessage?.lineNumber()}"
-                Log.e("ClaudeWidget", msg)
-                val text = consoleMessage?.message() ?: ""
-                if ((text.contains("error", ignoreCase = true) || text.contains("failed", ignoreCase = true)) 
-                    && !text.contains("Permissions-Policy", ignoreCase = true)) {
-                    logErrorToScreen(msg)
-                }
+                Log.d("ClaudeWidget", msg)
                 return super.onConsoleMessage(consoleMessage)
             }
         }
 
         webView.webViewClient = object : WebViewClient() {
-            override fun onReceivedError(
+            override fun shouldInterceptRequest(
                 view: WebView?,
-                request: android.webkit.WebResourceRequest?,
-                error: android.webkit.WebResourceError?
-            ) {
-                super.onReceivedError(view, request, error)
-                val msg = "WebView Error: code ${error?.errorCode}, description ${error?.description}, url ${request?.url}"
-                Log.e("ClaudeWidget", msg)
-                if (request?.isForMainFrame == true) {
-                    logErrorToScreen(msg)
+                request: WebResourceRequest?
+            ): WebResourceResponse? {
+                if (currentTab == "chatgpt" && !chatGptLoginDetected) {
+                    val urlStr = request?.url?.toString() ?: ""
+                    if (urlStr.contains("chatgpt.com")) {
+                        val auth = request?.requestHeaders?.get("Authorization")
+                            ?: request?.requestHeaders?.get("authorization")
+                        if (auth != null && auth.startsWith("Bearer ey")) {
+                            val token = auth.removePrefix("Bearer ").trim()
+                            handleChatGptTokenReceived(token)
+                        }
+                    }
                 }
-            }
-
-            override fun onReceivedHttpError(
-                view: WebView?,
-                request: android.webkit.WebResourceRequest?,
-                errorResponse: android.webkit.WebResourceResponse?
-            ) {
-                super.onReceivedHttpError(view, request, errorResponse)
-                val msg = "WebView HTTP Error: status ${errorResponse?.statusCode}, url ${request?.url}"
-                Log.e("ClaudeWidget", msg)
-                if (request?.isForMainFrame == true) {
-                    logErrorToScreen(msg)
-                }
+                return super.shouldInterceptRequest(view, request)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                checkLoginCookies(view)
+                if (currentTab == "claude") {
+                    checkClaudeLoginCookies(view)
+                } else {
+                    attemptChatGptSessionExtraction(view)
+                }
             }
-            
+
             override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
                 super.doUpdateVisitedHistory(view, url, isReload)
-                checkLoginCookies(view)
+                if (currentTab == "claude") {
+                    checkClaudeLoginCookies(view)
+                } else {
+                    attemptChatGptSessionExtraction(view)
+                }
             }
         }
 
-        webView.loadUrl("https://claude.ai/login")
+        val targetUrl = if (currentTab == "claude") "https://claude.ai/login" else "https://chatgpt.com/auth/login"
+        webView.loadUrl(targetUrl)
         startCookiePolling()
     }
 
     private val loginCheckHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val loginCheckRunnable = object : Runnable {
         override fun run() {
-            if (!loginDetected) {
-                checkLoginCookies(webView)
+            if (currentTab == "claude" && !claudeLoginDetected) {
+                checkClaudeLoginCookies(webView)
                 loginCheckHandler.postDelayed(this, 1000)
+            } else if (currentTab == "chatgpt" && !chatGptLoginDetected) {
+                attemptChatGptSessionExtraction(webView)
+                loginCheckHandler.postDelayed(this, 1500)
             }
         }
     }
@@ -339,7 +503,7 @@ class MainActivity : AppCompatActivity() {
         loginCheckHandler.post(loginCheckRunnable)
     }
 
-    private fun hasValidSessionKey(cookies: String?): Boolean {
+    private fun hasValidClaudeSessionKey(cookies: String?): Boolean {
         if (cookies.isNullOrEmpty()) return false
         val regex = Regex("""(?:^|;\s*)sessionKey=([^;]+)""")
         val match = regex.find(cookies) ?: return false
@@ -347,12 +511,12 @@ class MainActivity : AppCompatActivity() {
         return value.isNotEmpty() && value != "deleted" && value != "\"\"" && value != "null"
     }
 
-    private fun checkLoginCookies(view: WebView?) {
-        if (loginDetected) return
+    private fun checkClaudeLoginCookies(view: WebView?) {
+        if (claudeLoginDetected) return
         val cookies = CookieManager.getInstance().getCookie("https://claude.ai")
-        if (hasValidSessionKey(cookies)) {
-            loginDetected = true
-            Log.d("ClaudeWidget", "Login detected! Saving cookies.")
+        if (hasValidClaudeSessionKey(cookies)) {
+            claudeLoginDetected = true
+            Log.d("ClaudeWidget", "Claude login detected! Saving cookies.")
             sharedPrefs.edit()
                 .putString("saved_cookies", cookies)
                 .putString("user_agent", view?.settings?.userAgentString)
@@ -366,12 +530,47 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun logErrorToScreen(msg: String) {
+    private fun attemptChatGptSessionExtraction(view: WebView?) {
+        if (chatGptLoginDetected) return
+        view?.post {
+            view.evaluateJavascript("""
+                (function() {
+                    try {
+                        fetch('/api/auth/session')
+                            .then(function(r) { return r.json(); })
+                            .then(function(d) {
+                                if (d && d.accessToken) {
+                                    window.AndroidBridge.onChatGptToken(d.accessToken);
+                                }
+                            })
+                            .catch(function(e) {});
+                    } catch(e) {}
+                })();
+            """.trimIndent(), null)
+        }
+    }
+
+    private fun handleChatGptTokenReceived(token: String) {
+        if (token.length < 20) return
+
+        // Called from the JS bridge and shouldInterceptRequest, which both run off the main
+        // thread. WebView methods throw there, so do everything on the UI thread.
         runOnUiThread {
-            val errorText = findViewById<android.widget.TextView>(R.id.errorText)
-            errorText.visibility = View.VISIBLE
-            val currentText = errorText.text.toString()
-            errorText.text = if (currentText.isEmpty()) msg else "$currentText\n$msg"
+            if (chatGptLoginDetected || currentTab != "chatgpt") return@runOnUiThread
+            chatGptLoginDetected = true
+            Log.d("ChatGptWidget", "ChatGPT token captured! Saving session.")
+
+            val cookies = CookieManager.getInstance().getCookie("https://chatgpt.com")
+            sharedPrefs.edit()
+                .putString("chatgpt_access_token", token)
+                .putString("chatgpt_saved_cookies", cookies)
+                .putString("chatgpt_user_agent", webView.settings.userAgentString)
+                .apply()
+            CookieManager.getInstance().flush()
+
+            removePopupWebView()
+            showSuccessScreen()
+            UpdateWidgetWorker.enqueueWork(this@MainActivity)
         }
     }
 
@@ -400,4 +599,3 @@ class MainActivity : AppCompatActivity() {
         super.onBackPressed()
     }
 }
-

@@ -1,7 +1,7 @@
-# Claude Widget App - Development Notes
+# AI Usage Widget App - Development Notes
 
 ## Overview
-These notes document the major technical hurdles, edge cases, and solutions discovered while building the Claude API Usage Widget for Android. The app consists of a main Activity (for WebView authentication and settings) and a background WorkManager + AppWidgetProvider to periodically fetch and display API usage data on the home screen.
+These notes document the major technical hurdles, edge cases, and solutions discovered while building the AI Usage Widget for Android. The app consists of a main Activity (for WebView authentication and settings) and a background WorkManager + AppWidgetProvider to periodically fetch and display API usage data on the home screen.
 
 ## 1. Bypassing Cloudflare Bot Protection (403 Forbidden)
 Claude's API endpoints (`/api/organizations` and `/api/organizations/{orgId}/usage`) are heavily protected by Cloudflare. 
@@ -58,3 +58,11 @@ Claude's API endpoints (`/api/organizations` and `/api/organizations/{orgId}/usa
   * Preserved Google session cookies (`accounts.google.com`, `google.com`) so Google's 1-tap account picker appears immediately when selecting "Continue with Google".
   * Enabled third-party cookies on popup WebViews (`setAcceptThirdPartyCookies`) and called `CookieManager.getInstance().flush()` to ensure sessions persist across activity lifecycles.
   * Added a dedicated "Log out completely" option for cases where the user explicitly wants to purge all accounts including Google.
+
+## 8. Multi-Widget Support: ChatGPT / Codex Integration
+* **Implementation:**
+  * Added dedicated `ChatGptWidgetProvider`, `chatgpt_widget_layout.xml` (compact 2x2) and `chatgpt_widget_layout_wide.xml` (wide 4x2) featuring official ChatGPT branding and styling.
+  * Endpoints: Fetches usage from `https://chatgpt.com/backend-api/wham/usage` with automatic token refresh via `https://chatgpt.com/api/auth/session`.
+  * Rate limit parsing: Tracks `rate_limit.primary_window` (session limit) and `rate_limit.secondary_window` (weekly limit) with epoch reset countdown calculations.
+  * Tabbed In-App UI: `MainActivity` provides a seamless tab switcher between Claude and ChatGPT with independent authentication flows and Google OAuth session reuse.
+
