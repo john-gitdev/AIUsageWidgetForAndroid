@@ -10,6 +10,14 @@ plugins {
 val releaseStoreFile: String? = System.getenv("RELEASE_STORE_FILE")
 val hasReleaseSigning: Boolean = releaseStoreFile != null && file(releaseStoreFile).exists()
 
+// Printed so a release that silently came out unsigned is obvious in the build log
+// rather than only at the signature check.
+logger.lifecycle(
+    "release signing: " + (if (hasReleaseSigning) "ENABLED" else "DISABLED") +
+        " (RELEASE_STORE_FILE=" + (releaseStoreFile ?: "<unset>") +
+        ", exists=" + (releaseStoreFile != null && file(releaseStoreFile).exists()) + ")"
+)
+
 android {
     namespace = "com.example.claudewidget"
     compileSdk = 34
