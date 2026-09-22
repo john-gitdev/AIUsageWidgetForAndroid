@@ -22,7 +22,7 @@ Because this app requires you to log in to your Claude and/or ChatGPT account (w
 ## Installation
 1. Clone this repository:
    ```bash
-   git clone https://github.com/john-gitdev/claudewidget.git
+   git clone https://github.com/john-gitdev/AIUsageWidgetForAndroid.git
    ```
 2. Open the project in **Android Studio**.
 3. Build the project and install the APK on your device.
