@@ -50,3 +50,11 @@ Claude's API endpoints (`/api/organizations` and `/api/organizations/{orgId}/usa
 ## 6. Minor UI Fixes
 * **Spinner Visibility:** The interval settings dropdown used dark text on a dark background. Fixed by creating custom `spinner_item.xml` and `spinner_dropdown_item.xml` with `#FFFFFF` text and transparent backgrounds.
 * **Text Truncation:** Ensured all widget `TextView`s use `maxLines="1"` to prevent vertical expansion and layout breakage in tightly constrained widget spaces.
+
+## 7. Caching Google OAuth Session on Re-login
+* **The Problem:** Clicking "Re-login to Claude" called `CookieManager.getInstance().removeAllCookies(null)`, wiping all cookies across every domain. This forced the user to re-enter their Google email, password, and 2FA credentials from scratch every single time.
+* **The Solution:**
+  * Replaced global `removeAllCookies()` with domain-specific clearing (`clearClaudeSession()`) targeting `claude.ai` and `anthropic.com` cookies and WebStorage origins.
+  * Preserved Google session cookies (`accounts.google.com`, `google.com`) so Google's 1-tap account picker appears immediately when selecting "Continue with Google".
+  * Enabled third-party cookies on popup WebViews (`setAcceptThirdPartyCookies`) and called `CookieManager.getInstance().flush()` to ensure sessions persist across activity lifecycles.
+  * Added a dedicated "Log out completely" option for cases where the user explicitly wants to purge all accounts including Google.

@@ -165,6 +165,25 @@
                 android:background="#D4511E"
                 android:layout_marginTop="24dp"/>
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Preserves your Google session for 1-tap sign-in"
+                android:textColor="#808080"
+                android:textSize="12sp"
+                android:layout_marginTop="6dp"/>
+
+            <!-- Full Logout button -->
+            <TextView
+                android:id="@+id/btn_full_logout"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:gravity="center"
+                android:text="Log out completely (clear Google session)"
+                android:textColor="#666666"
+                android:textSize="13sp"
+                android:layout_marginTop="16dp"/>
+
         </LinearLayout>
     </ScrollView>
 </FrameLayout>

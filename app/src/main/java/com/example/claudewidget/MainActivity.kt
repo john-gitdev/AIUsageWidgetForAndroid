@@ -11,6 +11,7 @@ import android.widget.Spinner
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
+import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +20,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var sharedPrefs: SharedPreferences
+    private var popupWebView: WebView? = null
     private var loginDetected = false
 
     // Interval options: display label → minutes value
@@ -41,6 +43,7 @@ class MainActivity : AppCompatActivity() {
         
         // Enable WebView debugging for Chrome DevTools
         WebView.setWebContentsDebuggingEnabled(true)
+        CookieManager.getInstance().setAcceptCookie(true)
 
         // Check if user is already logged in (has cookies)
         val existingCookies = sharedPrefs.getString("saved_cookies", null)
@@ -55,15 +58,93 @@ class MainActivity : AppCompatActivity() {
 
     private fun showLoginScreen() {
         loginDetected = false
+        removePopupWebView()
         findViewById<View>(R.id.loadingLayout).visibility = View.VISIBLE
         findViewById<View>(R.id.successLayout).visibility = View.GONE
         setupWebView()
     }
 
     private fun showSuccessScreen() {
+        removePopupWebView()
+        loginCheckHandler.removeCallbacks(loginCheckRunnable)
         findViewById<View>(R.id.loadingLayout).visibility = View.GONE
         findViewById<View>(R.id.successLayout).visibility = View.VISIBLE
         setupSettings()
+    }
+
+    private fun removePopupWebView() {
+        popupWebView?.let {
+            try {
+                findViewById<android.widget.FrameLayout>(R.id.root_frame).removeView(it)
+                it.destroy()
+            } catch (e: Exception) {
+                Log.w("ClaudeWidget", "Error removing popup WebView", e)
+            }
+            popupWebView = null
+        }
+    }
+
+    private fun clearClaudeSession() {
+        val cookieManager = CookieManager.getInstance()
+        val targetUrls = listOf(
+            "https://claude.ai",
+            "https://claude.ai/",
+            "https://api.claude.ai",
+            "https://anthropic.com"
+        )
+        val targetDomains = listOf(
+            "claude.ai",
+            ".claude.ai",
+            "anthropic.com",
+            ".anthropic.com"
+        )
+        val knownClaudeCookieNames = setOf(
+            "sessionKey",
+            "cf_clearance",
+            "__cf_bm",
+            "anthropic-session",
+            "claude-session",
+            "ajs_user_id",
+            "ajs_anonymous_id",
+            "intercom-id",
+            "intercom-session"
+        )
+
+        val cookieNamesToClear = mutableSetOf<String>()
+        cookieNamesToClear.addAll(knownClaudeCookieNames)
+
+        for (url in targetUrls) {
+            val cookieStr = cookieManager.getCookie(url) ?: continue
+            for (cookie in cookieStr.split(";")) {
+                val name = cookie.substringBefore("=").trim()
+                if (name.isNotEmpty()) {
+                    cookieNamesToClear.add(name)
+                }
+            }
+        }
+
+        for (url in targetUrls) {
+            for (name in cookieNamesToClear) {
+                // Clear host-only
+                cookieManager.setCookie(url, "$name=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0")
+                // Clear across domain variations
+                for (domain in targetDomains) {
+                    cookieManager.setCookie(url, "$name=; Domain=$domain; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0")
+                }
+            }
+        }
+
+        // Clear WebStorage (localStorage, IndexedDB) for Claude origins only (preserves Google storage)
+        try {
+            val webStorage = WebStorage.getInstance()
+            webStorage.deleteOrigin("https://claude.ai")
+            webStorage.deleteOrigin("https://api.claude.ai")
+            webStorage.deleteOrigin("https://anthropic.com")
+        } catch (e: Exception) {
+            Log.w("ClaudeWidget", "Failed to clear web storage for Claude", e)
+        }
+
+        cookieManager.flush()
     }
 
     private fun setupSettings() {
@@ -114,12 +195,20 @@ class MainActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // ---- Re-login button ----
+        // ---- Re-login button (clears Claude session, preserves Google account) ----
         findViewById<View>(R.id.btn_relogin).setOnClickListener {
-            // Clear cookies and show login again
             sharedPrefs.edit().remove("saved_cookies").remove("user_agent").apply()
-            CookieManager.getInstance().removeAllCookies(null)
+            clearClaudeSession()
             showLoginScreen()
+        }
+
+        // ---- Full Logout button (clears all cookies including Google) ----
+        findViewById<View>(R.id.btn_full_logout)?.setOnClickListener {
+            sharedPrefs.edit().remove("saved_cookies").remove("user_agent").apply()
+            CookieManager.getInstance().removeAllCookies {
+                CookieManager.getInstance().flush()
+                runOnUiThread { showLoginScreen() }
+            }
         }
     }
 
@@ -138,6 +227,7 @@ class MainActivity : AppCompatActivity() {
             userAgentString = defaultAgent.replace("; wv", "")
         }
 
+        CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
         webView.webChromeClient = object : WebChromeClient() {
             override fun onCreateWindow(
@@ -146,19 +236,24 @@ class MainActivity : AppCompatActivity() {
                 isUserGesture: Boolean,
                 resultMsg: android.os.Message?
             ): Boolean {
+                removePopupWebView()
                 val newWebView = WebView(this@MainActivity)
+                popupWebView = newWebView
                 newWebView.settings.apply {
                     javaScriptEnabled = true
                     domStorageEnabled = true
+                    databaseEnabled = true
                     setSupportMultipleWindows(true)
                     javaScriptCanOpenWindowsAutomatically = true
                     val defaultAgent = userAgentString
                     userAgentString = defaultAgent.replace("; wv", "")
                 }
+                CookieManager.getInstance().setAcceptCookie(true)
+                CookieManager.getInstance().setAcceptThirdPartyCookies(newWebView, true)
                 
                 newWebView.webChromeClient = object : WebChromeClient() {
                     override fun onCloseWindow(window: WebView?) {
-                        findViewById<android.widget.FrameLayout>(R.id.root_frame).removeView(newWebView)
+                        removePopupWebView()
                     }
                 }
                 newWebView.webViewClient = WebViewClient() // Allows URLs to load inside the popup instead of external browser
@@ -244,17 +339,29 @@ class MainActivity : AppCompatActivity() {
         loginCheckHandler.post(loginCheckRunnable)
     }
 
+    private fun hasValidSessionKey(cookies: String?): Boolean {
+        if (cookies.isNullOrEmpty()) return false
+        val regex = Regex("""(?:^|;\s*)sessionKey=([^;]+)""")
+        val match = regex.find(cookies) ?: return false
+        val value = match.groupValues[1].trim()
+        return value.isNotEmpty() && value != "deleted" && value != "\"\"" && value != "null"
+    }
+
     private fun checkLoginCookies(view: WebView?) {
         if (loginDetected) return
         val cookies = CookieManager.getInstance().getCookie("https://claude.ai")
-        if (cookies != null && cookies.contains("sessionKey=") && !cookies.contains("sessionKey=;") && !cookies.contains("sessionKey=deleted")) {
+        if (hasValidSessionKey(cookies)) {
             loginDetected = true
             Log.d("ClaudeWidget", "Login detected! Saving cookies.")
             sharedPrefs.edit()
                 .putString("saved_cookies", cookies)
                 .putString("user_agent", view?.settings?.userAgentString)
                 .apply()
-            runOnUiThread { showSuccessScreen() }
+            CookieManager.getInstance().flush()
+            runOnUiThread {
+                removePopupWebView()
+                showSuccessScreen()
+            }
             UpdateWidgetWorker.enqueueWork(this@MainActivity)
         }
     }
@@ -267,4 +374,30 @@ class MainActivity : AppCompatActivity() {
             errorText.text = if (currentText.isEmpty()) msg else "$currentText\n$msg"
         }
     }
+
+    override fun onPause() {
+        super.onPause()
+        CookieManager.getInstance().flush()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        loginCheckHandler.removeCallbacks(loginCheckRunnable)
+        removePopupWebView()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (popupWebView != null) {
+            removePopupWebView()
+            return
+        }
+        if (findViewById<View>(R.id.loadingLayout).visibility == View.VISIBLE && webView.canGoBack()) {
+            webView.goBack()
+            return
+        }
+        @Suppress("DEPRECATION")
+        super.onBackPressed()
+    }
 }
+
