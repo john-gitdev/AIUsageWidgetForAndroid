@@ -16,7 +16,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: set up JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -28,10 +28,47 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
+    # The tag must match the versionName in app/build.gradle.kts, otherwise the release
+    # would ship an APK that reports a different version than the release claims.
+    - name: Check tag matches app version
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        TAG_VERSION="${GITHUB_REF_NAME#v}"
+        APP_VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+        echo "tag=$TAG_VERSION app=$APP_VERSION"
+        if [ "$TAG_VERSION" != "$APP_VERSION" ]; then
+          echo "::error::Tag v$TAG_VERSION does not match versionName $APP_VERSION in app/build.gradle.kts"
+          exit 1
+        fi
+
+    # Pull this version's section out of CHANGELOG.md to use as the release body.
+    - name: Extract release notes
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        VERSION="${GITHUB_REF_NAME#v}"
+        awk -v v="$VERSION" '
+          $0 == "## [" v "]" || index($0, "## [" v "] ") == 1 { found = 1; next }
+          found && /^## \[/ { exit }
+          found { print }
+        ' CHANGELOG.md > RELEASE_NOTES.md
+        if [ ! -s RELEASE_NOTES.md ]; then
+          echo "::error::No CHANGELOG.md section found for version $VERSION"
+          exit 1
+        fi
+        echo "--- release notes ---"
+        cat RELEASE_NOTES.md
+
+    # Give the APK a versioned name so downloads from different releases are distinct.
+    - name: Name the APK
+      if: startsWith(github.ref, 'refs/tags/')
+      run: cp app/build/outputs/apk/debug/app-debug.apk "AIUsageWidget-${GITHUB_REF_NAME}.apk"
+
     - name: Release APK
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: app/build/outputs/apk/debug/app-debug.apk
+        name: AI Usage Widget ${{ github.ref_name }}
+        body_path: RELEASE_NOTES.md
+        files: AIUsageWidget-${{ github.ref_name }}.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
