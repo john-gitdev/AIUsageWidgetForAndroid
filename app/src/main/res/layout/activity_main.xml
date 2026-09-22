@@ -188,7 +188,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Show how much of each limit you've used, or how much you have left."
+                        android:text="Show how much you've used or how much is left."
                         android:textColor="#808080"
                         android:textSize="12sp"
                         android:layout_marginBottom="12dp"/>
@@ -200,6 +200,16 @@
                         android:background="#363636"
                         android:padding="8dp"
                         android:popupBackground="#363636"/>
+
+                    <!-- Shared by both tabs: links Claude's and ChatGPT's "Show Usage As" -->
+                    <CheckBox
+                        android:id="@+id/cb_usage_display_linked"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minHeight="0dp"
+                        android:text="Use the same option for ChatGPT"
+                        android:textColor="#B0B0B0"
+                        android:textSize="13sp"/>
                 </LinearLayout>
 
                 <!-- Tap Action -->

@@ -12,6 +12,11 @@ object UsageDisplay {
     /** Claude defaults to showing used, ChatGPT to showing left. */
     fun defaultMode(service: String) = if (service == "chatgpt") "left" else "used"
 
+    /** When true, changing "Show Usage As" on either tab applies to both services. Off by default. */
+    const val LINKED_KEY = "usage_display_linked"
+
+    fun otherService(service: String) = if (service == "chatgpt") "claude" else "chatgpt"
+
     fun mode(prefs: SharedPreferences, service: String): String =
         prefs.getString(prefKey(service), defaultMode(service)) ?: defaultMode(service)
 

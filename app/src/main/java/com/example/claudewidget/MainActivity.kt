@@ -2,11 +2,13 @@ package com.example.claudewidget
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.CheckBox
 import android.widget.Spinner
 import android.widget.TextView
 import android.webkit.CookieManager
@@ -287,6 +289,14 @@ class MainActivity : AppCompatActivity() {
         cookieManager.flush()
     }
 
+    private fun updateWidgetsFor(service: String) {
+        if (service == "claude") {
+            ClaudeWidgetProvider.updateAllWidgets(this)
+        } else {
+            ChatGptWidgetProvider.updateAllWidgets(this)
+        }
+    }
+
     private fun setupSettings() {
         // ---- Refresh Interval Spinner ----
         val spinner = findViewById<Spinner>(R.id.spinner_interval)
@@ -332,16 +342,42 @@ class MainActivity : AppCompatActivity() {
                 val newDisplay = displayOptions[position].second
                 // Compare against the saved value (not currentDisplay) so switching back and forth works
                 if (newDisplay != UsageDisplay.mode(sharedPrefs, service)) {
-                    sharedPrefs.edit().putString(UsageDisplay.prefKey(service), newDisplay).apply()
+                    val linked = sharedPrefs.getBoolean(UsageDisplay.LINKED_KEY, false)
+                    val services = if (linked) listOf(service, UsageDisplay.otherService(service)) else listOf(service)
+                    val editor = sharedPrefs.edit()
+                    services.forEach { editor.putString(UsageDisplay.prefKey(it), newDisplay) }
+                    editor.apply()
                     // Widgets format from saved data, so no re-fetch is needed
-                    if (service == "claude") {
-                        ClaudeWidgetProvider.updateAllWidgets(this@MainActivity)
-                    } else {
-                        ChatGptWidgetProvider.updateAllWidgets(this@MainActivity)
-                    }
+                    services.forEach { updateWidgetsFor(it) }
                 }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // ---- "Use the same option for <other service>" checkbox ----
+        // Both tabs read and write the same pref, so checking/unchecking on one tab is reflected on the other.
+        val linkBox = findViewById<CheckBox>(R.id.cb_usage_display_linked)
+        linkBox.text = if (service == "claude") "Use the same option for ChatGPT" else "Use the same option for Claude"
+        val accent = if (service == "claude") 0xFFD4511E.toInt() else 0xFF10A37F.toInt()
+        linkBox.buttonTintList = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(accent, 0xFF808080.toInt())
+        )
+        // setupSettings runs on every tab switch, so detach the old listener before restoring the state
+        linkBox.setOnCheckedChangeListener(null)
+        linkBox.isChecked = sharedPrefs.getBoolean(UsageDisplay.LINKED_KEY, false)
+        linkBox.setOnCheckedChangeListener { _, checked ->
+            val editor = sharedPrefs.edit().putBoolean(UsageDisplay.LINKED_KEY, checked)
+            if (checked) {
+                // Apply this tab's choice to the other service right away
+                val other = UsageDisplay.otherService(service)
+                editor.putString(UsageDisplay.prefKey(other), UsageDisplay.mode(sharedPrefs, service))
+                editor.apply()
+                updateWidgetsFor(other)
+            } else {
+                // Unlinking keeps each service's current value; they just stop syncing
+                editor.apply()
+            }
         }
 
         // ---- Tap Action Spinner ----
