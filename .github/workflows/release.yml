@@ -53,15 +53,29 @@ jobs:
     # Catches a wrong, missing or swapped keystore before anything is published.
     - name: Verify APK is signed with the expected key
       run: |
-        APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
-        ACTUAL=$("$APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk \
-          | grep -m1 -oP 'Signer #1 certificate SHA-256 digest: \K[0-9a-f]+')
+        APK=app/build/outputs/apk/release/app-release.apk
+
+        # The SDK location differs by runner image, and apksigner sits under a
+        # build-tools version directory, so search rather than assume a path.
+        SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+        APKSIGNER=$(find "$SDK" -name apksigner -type f 2>/dev/null | sort -V | tail -1)
+        if [ -z "$APKSIGNER" ]; then
+          echo "::error::apksigner not found under $SDK"
+          echo "ANDROID_HOME=${ANDROID_HOME:-<unset>} ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-<unset>}"
+          ls -1 "$SDK" 2>/dev/null || echo "(cannot list $SDK)"
+          exit 1
+        fi
+        echo "using $APKSIGNER"
+
+        "$APKSIGNER" verify --print-certs "$APK" | tee certs.txt
+        ACTUAL=$(grep -m1 -oP 'Signer #1 certificate SHA-256 digest: \K[0-9a-f]+' certs.txt || true)
         echo "expected: $EXPECTED_SIGNER_SHA256"
-        echo "actual:   $ACTUAL"
+        echo "actual:   ${ACTUAL:-<no signer fingerprint found>}"
         if [ "$ACTUAL" != "$EXPECTED_SIGNER_SHA256" ]; then
           echo "::error::APK signed with unexpected certificate. Publishing this would force every user to reinstall."
           exit 1
         fi
+        rm -f certs.txt
 
     - name: Remove keystore from runner
       if: always()
