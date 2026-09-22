@@ -3,22 +3,47 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Release signing is read from the environment so the keystore and its password never
+// live in the repo. When these are unset (a normal local checkout) assembleDebug is
+// unaffected, and assembleRelease still configures — it just produces an unsigned APK
+// rather than failing the build.
+val releaseStoreFile: String? = System.getenv("RELEASE_STORE_FILE")
+val hasReleaseSigning: Boolean = releaseStoreFile != null && file(releaseStoreFile).exists()
+
 android {
     namespace = "com.example.claudewidget"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.claudewidget"
+        // Note: this is the installed app identity, deliberately different from the
+        // Kotlin package above. Changing it again would orphan installs the same way
+        // the move off com.example.* did in 1.0.9.
+        applicationId = "dev.johngitdev.aiusagewidget"
         minSdk = 26
         targetSdk = 34
-        versionCode = 11
-        versionName = "1.0.8"
+        versionCode = 12
+        versionName = "1.0.9"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = System.getenv("RELEASE_STORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: "release"
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+                    ?: System.getenv("RELEASE_STORE_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {

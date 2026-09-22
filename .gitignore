@@ -29,3 +29,8 @@ google-services.json
 
 # App specific
 app/build/
+
+# Signing keys and their passwords must never be committed.
+*.jks
+*.keystore
+*-password.txt

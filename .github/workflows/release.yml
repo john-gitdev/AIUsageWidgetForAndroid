@@ -6,6 +6,13 @@ on:
       - 'v*'
   workflow_dispatch:
 
+env:
+  # The release signing certificate, pinned. Android keys upgrades off this, so if a
+  # build is ever signed by a different key every user has to uninstall and reinstall.
+  # Hardcoded on purpose: a certificate fingerprint is public, and pinning it here turns
+  # a lost or swapped keystore into a failed build instead of a broken release.
+  EXPECTED_SIGNER_SHA256: 57fa69ea917871ffeb1b762b59d52284f8a3b78a06309a61783195d9f61de860
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,8 +32,40 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
+    - name: Decode release keystore
+      env:
+        RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+      run: |
+        if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
+          echo "::error::RELEASE_KEYSTORE_BASE64 secret is not set; refusing to build an unsigned release"
+          exit 1
+        fi
+        printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+        echo "keystore bytes: $(wc -c < "$RUNNER_TEMP/release.jks")"
+
+    - name: Build Release APK
+      env:
+        RELEASE_STORE_FILE: ${{ runner.temp }}/release.jks
+        RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        RELEASE_KEY_ALIAS: release
+      run: ./gradlew assembleRelease
+
+    # Catches a wrong, missing or swapped keystore before anything is published.
+    - name: Verify APK is signed with the expected key
+      run: |
+        APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+        ACTUAL=$("$APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk \
+          | grep -m1 -oP 'Signer #1 certificate SHA-256 digest: \K[0-9a-f]+')
+        echo "expected: $EXPECTED_SIGNER_SHA256"
+        echo "actual:   $ACTUAL"
+        if [ "$ACTUAL" != "$EXPECTED_SIGNER_SHA256" ]; then
+          echo "::error::APK signed with unexpected certificate. Publishing this would force every user to reinstall."
+          exit 1
+        fi
+
+    - name: Remove keystore from runner
+      if: always()
+      run: rm -f "$RUNNER_TEMP/release.jks"
 
     # The tag must match the versionName in app/build.gradle.kts, otherwise the release
     # would ship an APK that reports a different version than the release claims.
@@ -61,7 +100,7 @@ jobs:
     # Give the APK a versioned name so downloads from different releases are distinct.
     - name: Name the APK
       if: startsWith(github.ref, 'refs/tags/')
-      run: cp app/build/outputs/apk/debug/app-debug.apk "AIUsageWidget-${GITHUB_REF_NAME}.apk"
+      run: cp app/build/outputs/apk/release/app-release.apk "AIUsageWidget-${GITHUB_REF_NAME}.apk"
 
     - name: Release APK
       uses: softprops/action-gh-release@v3

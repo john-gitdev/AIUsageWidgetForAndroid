@@ -5,9 +5,35 @@ All notable changes to AI Usage Widget are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Released APKs are attached to each [GitHub release](https://github.com/john-gitdev/AIUsageWidgetForAndroid/releases)
-and are **debug-signed**. Android keys upgrades off the signing certificate, so if you
-sideload a release over a build you compiled yourself, uninstall the old copy first.
+Released APKs are attached to each [GitHub release](https://github.com/john-gitdev/AIUsageWidgetForAndroid/releases).
+
+**From 1.0.9 on, releases install over each other normally.** They are signed with a
+stable release key, so updating is just a matter of installing the new APK.
+
+**Upgrading from 1.0.8 or earlier needs one uninstall.** Every release up to and
+including 1.0.8 was debug-signed, and because each CI run generated a throwaway debug
+key, *no two of those releases shared a certificate*. Android keys upgrades off the
+signing certificate, so installing 1.0.9 over an older build fails until the old copy is
+removed. Uninstalling clears app data, so you will need to sign in to Claude and ChatGPT
+again — once.
+
+## [1.0.9] - 2026-09-22
+
+### Changed
+- **Releases are signed with a stable release key**, so from this version on updates
+  install over each other without uninstalling. Builds are now `assembleRelease` rather
+  than `assembleDebug`, and CI verifies the signing certificate against a pinned
+  fingerprint before publishing, so a lost or swapped keystore fails the build instead of
+  shipping a release that silently orphans every install.
+- **Application ID moved from `com.example.claudewidget` to `dev.johngitdev.aiusagewidget`.**
+  `com.example.*` is a placeholder namespace that app stores reject. This was done in the
+  same version as the signing change so that both would cost only the single uninstall
+  that the signing change already required.
+
+### Upgrading
+Uninstall any earlier version first, then install this one. Your home screen widgets will
+need to be added again, and you will need to log in to Claude and ChatGPT once more.
+Updates after this one will not need any of that.
 
 ## [1.0.8] - 2026-09-22
 
@@ -99,6 +125,7 @@ sideload a release over a build you compiled yourself, uninstall the old copy fi
 
 Initial release.
 
+[1.0.9]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.5...v1.0.6
