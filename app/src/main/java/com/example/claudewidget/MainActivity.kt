@@ -302,9 +302,43 @@ class MainActivity : AppCompatActivity() {
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val newInterval = intervalOptions[position].second
-                if (newInterval != currentInterval) {
+                // Compare against the saved value (not currentInterval) so switching back and forth works
+                if (newInterval != sharedPrefs.getLong("refresh_interval_minutes", 15L)) {
                     UpdateWidgetWorker.rescheduleWork(this@MainActivity, newInterval)
                     Log.d("ClaudeWidget", "Interval changed to ${newInterval}m")
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // ---- Usage Display Spinner (per service: applies to this tab's widget only) ----
+        val service = currentTab
+        findViewById<TextView>(R.id.tv_usage_display_title).text =
+            if (service == "claude") "Show Claude Usage As" else "Show ChatGPT Usage As"
+
+        val displayOptions = listOf("Percent used" to "used", "Percent left" to "left")
+        val displaySpinner = findViewById<Spinner>(R.id.spinner_usage_display)
+        val displayLabels = displayOptions.map { it.first }
+        val displayAdapter = ArrayAdapter(this, R.layout.spinner_item, displayLabels)
+        displayAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        displaySpinner.adapter = displayAdapter
+
+        val currentDisplay = UsageDisplay.mode(sharedPrefs, service)
+        val displaySelectedIndex = displayOptions.indexOfFirst { it.second == currentDisplay }.coerceAtLeast(0)
+        displaySpinner.setSelection(displaySelectedIndex)
+
+        displaySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val newDisplay = displayOptions[position].second
+                // Compare against the saved value (not currentDisplay) so switching back and forth works
+                if (newDisplay != UsageDisplay.mode(sharedPrefs, service)) {
+                    sharedPrefs.edit().putString(UsageDisplay.prefKey(service), newDisplay).apply()
+                    // Widgets format from saved data, so no re-fetch is needed
+                    if (service == "claude") {
+                        ClaudeWidgetProvider.updateAllWidgets(this@MainActivity)
+                    } else {
+                        ChatGptWidgetProvider.updateAllWidgets(this@MainActivity)
+                    }
                 }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -325,7 +359,8 @@ class MainActivity : AppCompatActivity() {
         tapSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val newAction = tapOptions[position].second
-                if (newAction != currentTapAction) {
+                // Compare against the saved value (not currentTapAction) so switching back and forth works
+                if (newAction != sharedPrefs.getString("tap_action", "refresh")) {
                     sharedPrefs.edit().putString("tap_action", newAction).apply()
                     ClaudeWidgetProvider.updateAllWidgets(this@MainActivity)
                     ChatGptWidgetProvider.updateAllWidgets(this@MainActivity)

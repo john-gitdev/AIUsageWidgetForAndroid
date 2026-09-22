@@ -89,7 +89,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="32dp"
+                android:paddingHorizontal="32dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
                 android:gravity="center_horizontal">
 
                 <TextView
@@ -98,7 +100,7 @@
                     android:text="✓"
                     android:textSize="48sp"
                     android:textColor="#4CAF50"
-                    android:layout_marginTop="24dp"/>
+                    android:includeFontPadding="false"/>
 
                 <TextView
                     android:id="@+id/tv_success_title"
@@ -108,7 +110,7 @@
                     android:textSize="24sp"
                     android:textStyle="bold"
                     android:textColor="#FFFFFF"
-                    android:layout_marginTop="16dp"/>
+                    android:layout_marginTop="4dp"/>
 
                 <TextView
                     android:id="@+id/tv_success_subtitle"
@@ -128,8 +130,8 @@
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#FFFFFF"
-                    android:layout_marginTop="36dp"
-                    android:layout_marginBottom="16dp"/>
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="12dp"/>
 
                 <!-- Auto Refresh Interval -->
                 <LinearLayout
@@ -158,6 +160,41 @@
 
                     <Spinner
                         android:id="@+id/spinner_interval"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="#363636"
+                        android:padding="8dp"
+                        android:popupBackground="#363636"/>
+                </LinearLayout>
+
+                <!-- Usage Display -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#2a2a2a"
+                    android:padding="16dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:id="@+id/tv_usage_display_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Show Usage As"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Show how much of each limit you've used, or how much you have left."
+                        android:textColor="#808080"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_usage_display"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:background="#363636"
@@ -208,7 +245,7 @@
                     android:textColor="#FFFFFF"
                     android:textSize="15sp"
                     android:background="#D4511E"
-                    android:layout_marginTop="24dp"/>
+                    android:layout_marginTop="16dp"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -227,7 +264,7 @@
                     android:text="Log out completely (clear Google session)"
                     android:textColor="#666666"
                     android:textSize="13sp"
-                    android:layout_marginTop="16dp"/>
+                    android:layout_marginTop="8dp"/>
 
             </LinearLayout>
         </ScrollView>

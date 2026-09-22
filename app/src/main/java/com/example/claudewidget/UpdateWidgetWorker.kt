@@ -169,6 +169,9 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
         val claudeCookies = prefs.getString("saved_cookies", null)
         if (!claudeCookies.isNullOrEmpty()) {
             updateClaude(client, prefs, defaultUa, claudeCookies)
+        } else {
+            // Not logged in — redraw anyway so the widget doesn't stay stuck on "Refreshing..."
+            ClaudeWidgetProvider.updateAllWidgets(applicationContext)
         }
 
         // 2. Update ChatGPT if configured
@@ -176,6 +179,8 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
         val chatGptCookies = prefs.getString("chatgpt_saved_cookies", null)
         if (!chatGptToken.isNullOrEmpty() || !chatGptCookies.isNullOrEmpty()) {
             updateChatGpt(client, prefs, defaultUa, chatGptToken, chatGptCookies)
+        } else {
+            ChatGptWidgetProvider.updateAllWidgets(applicationContext)
         }
 
         return Result.success()

@@ -73,13 +73,15 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
             }
 
             // ---- Bind data ----
-            views.setTextViewText(R.id.tv_session_pct, prefs.getString("session_pct", "--"))
-            views.setTextViewText(R.id.tv_session_reset, prefs.getString("session_reset", "Tap refresh"))
-            views.setProgressBar(R.id.pb_session, 100, prefs.getInt("session_prog", 0), false)
+            val showLeft = UsageDisplay.mode(prefs, "claude") == "left"
 
-            views.setTextViewText(R.id.tv_weekly_pct, prefs.getString("weekly_pct", "--"))
+            UsageDisplay.bind(views, R.id.tv_session_pct, R.id.pb_session,
+                prefs.getString("session_pct", "--"), prefs.getInt("session_prog", 0), showLeft)
+            views.setTextViewText(R.id.tv_session_reset, prefs.getString("session_reset", "Tap refresh"))
+
+            UsageDisplay.bind(views, R.id.tv_weekly_pct, R.id.pb_weekly,
+                prefs.getString("weekly_pct", "--"), prefs.getInt("weekly_prog", 0), showLeft)
             views.setTextViewText(R.id.tv_weekly_reset, prefs.getString("weekly_reset", "Tap refresh"))
-            views.setProgressBar(R.id.pb_weekly, 100, prefs.getInt("weekly_prog", 0), false)
 
             views.setTextViewText(R.id.tv_last_update, prefs.getString("last_update", "Not yet refreshed"))
 
@@ -153,7 +155,9 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH) {
             Log.d(TAG, "Refresh button tapped!")
+            // The worker refreshes every service, so show the refreshing state on all widgets
             showRefreshingState(context)
+            ChatGptWidgetProvider.showRefreshingState(context)
             UpdateWidgetWorker.runNow(context)
         }
     }

@@ -74,13 +74,15 @@ class ChatGptWidgetProvider : AppWidgetProvider() {
             }
 
             // ---- Bind data ----
-            views.setTextViewText(R.id.tv_session_pct, prefs.getString("chatgpt_session_pct", "--"))
-            views.setTextViewText(R.id.tv_session_reset, prefs.getString("chatgpt_session_reset", "Tap refresh"))
-            views.setProgressBar(R.id.pb_session, 100, prefs.getInt("chatgpt_session_prog", 0), false)
+            val showLeft = UsageDisplay.mode(prefs, "chatgpt") == "left"
 
-            views.setTextViewText(R.id.tv_weekly_pct, prefs.getString("chatgpt_weekly_pct", "--"))
+            UsageDisplay.bind(views, R.id.tv_session_pct, R.id.pb_session,
+                prefs.getString("chatgpt_session_pct", "--"), prefs.getInt("chatgpt_session_prog", 0), showLeft)
+            views.setTextViewText(R.id.tv_session_reset, prefs.getString("chatgpt_session_reset", "Tap refresh"))
+
+            UsageDisplay.bind(views, R.id.tv_weekly_pct, R.id.pb_weekly,
+                prefs.getString("chatgpt_weekly_pct", "--"), prefs.getInt("chatgpt_weekly_prog", 0), showLeft)
             views.setTextViewText(R.id.tv_weekly_reset, prefs.getString("chatgpt_weekly_reset", "Tap refresh"))
-            views.setProgressBar(R.id.pb_weekly, 100, prefs.getInt("chatgpt_weekly_prog", 0), false)
 
             views.setTextViewText(R.id.tv_last_update, prefs.getString("chatgpt_last_update", "Not yet refreshed"))
 
@@ -154,7 +156,9 @@ class ChatGptWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH_CHATGPT) {
             Log.d(TAG, "ChatGPT Refresh tapped!")
+            // The worker refreshes every service, so show the refreshing state on all widgets
             showRefreshingState(context)
+            ClaudeWidgetProvider.showRefreshingState(context)
             UpdateWidgetWorker.runNowChatGpt(context)
         }
     }
