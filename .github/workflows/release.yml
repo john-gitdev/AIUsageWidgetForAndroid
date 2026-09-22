@@ -71,8 +71,17 @@ jobs:
         fi
         echo "using $APKSIGNER"
 
-        "$APKSIGNER" verify --print-certs "$APK" | tee certs.txt
-        ACTUAL=$(grep -m1 -oP 'Signer #1 certificate SHA-256 digest: \K[0-9a-f]+' certs.txt || true)
+        if ! "$APKSIGNER" verify --print-certs "$APK" > certs.txt 2>&1; then
+          echo "::error::apksigner could not verify $APK"
+          cat certs.txt
+          exit 1
+        fi
+        cat certs.txt
+
+        # Match the fingerprint regardless of apksigner's wording: build-tools 36 prints
+        # "Signer #1 certificate SHA-256 digest:", 37 prints "V2 Signer: certificate
+        # SHA-256 digest:". Keying off the label alone survives both.
+        ACTUAL=$(grep -m1 -oiP 'certificate SHA-256 digest:\s*\K[0-9a-f]{64}' certs.txt || true)
         echo "expected: $EXPECTED_SIGNER_SHA256"
         echo "actual:   ${ACTUAL:-<no signer fingerprint found>}"
         if [ "$ACTUAL" != "$EXPECTED_SIGNER_SHA256" ]; then
