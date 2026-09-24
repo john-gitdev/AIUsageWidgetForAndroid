@@ -48,11 +48,7 @@ jobs:
         RELEASE_STORE_FILE: ${{ runner.temp }}/release.jks
         RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
         RELEASE_KEY_ALIAS: release
-      run: |
-        echo "RELEASE_STORE_FILE=$RELEASE_STORE_FILE"
-        ls -l "$RELEASE_STORE_FILE" || echo "keystore NOT at that path"
-        echo "password length: ${#RELEASE_STORE_PASSWORD}"
-        ./gradlew assembleRelease
+      run: ./gradlew assembleRelease
 
     # Catches a wrong, missing or swapped keystore before anything is published.
     - name: Verify APK is signed with the expected key
