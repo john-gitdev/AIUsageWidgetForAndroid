@@ -1,0 +1,34 @@
+<!-- Single-color hourglass for themed icons (the full-color art is a raster in mipmap-*/ic_launcher_foreground.png). The system
+     tints every path one color, so the "AI" badge is an outline and the glass stops at its edge. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,40 L64,40 C63.6,42.5 62,44.5 60,45.5 L48,45.5 C46,44.5 44.4,42.5 44,40 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M43.5,77 C44,70 50,66 54,65 C58,66 64,70 64.5,77 Z" />
+    <path
+        android:pathData="M40,30 C40,38.4 43.96,43.6 47.13,47.27 M68,30 C68,38.4 64.04,43.6 60.87,47.27 M40,78 C40,69.6 43.96,64.4 47.13,60.73 M68,78 C68,69.6 64.04,64.4 60.87,60.73"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M35,28 L73,28 M35,80 L73,80"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M48,47 L60,47 A7,7 0 0,1 60,61 L48,61 A7,7 0 0,1 48,47 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2" />
+    <path
+        android:pathData="M46.5,58 L50,50 L53.5,58 M47.6,55.5 L52.4,55.5 M60,50 L60,58"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
