@@ -83,8 +83,8 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
 
-        /** Show a "Refreshing..." state on the widget immediately */
-        fun showRefreshingState(context: Context) {
+        /** Show a "Refreshing..." state (or another [status], like "Waiting for network...") on the widget immediately */
+        fun showRefreshingState(context: Context, status: String = "Refreshing...") {
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, ClaudeWidgetProvider::class.java))
             for (id in ids) {
@@ -122,9 +122,9 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
                     ))
                 }
 
-                views.setTextViewText(R.id.tv_session_reset, "Refreshing...")
-                views.setTextViewText(R.id.tv_weekly_reset, "Refreshing...")
-                views.setTextViewText(R.id.tv_last_update, "Refreshing...")
+                views.setTextViewText(R.id.tv_session_reset, status)
+                views.setTextViewText(R.id.tv_weekly_reset, status)
+                views.setTextViewText(R.id.tv_last_update, status)
                 mgr.updateAppWidget(id, views)
             }
         }
@@ -146,8 +146,10 @@ class ClaudeWidgetProvider : AppWidgetProvider() {
         if (intent.action == ACTION_REFRESH) {
             Log.d(TAG, "Refresh button tapped!")
             // The worker refreshes every service, so show the refreshing state on all widgets
-            showRefreshingState(context)
-            ChatGptWidgetProvider.showRefreshingState(context)
+            // When offline, the refresh waits for a connection instead of failing, so say that
+            val status = if (UpdateWidgetWorker.hasUsableNetwork(context)) "Refreshing..." else "Waiting for network..."
+            showRefreshingState(context, status)
+            ChatGptWidgetProvider.showRefreshingState(context, status)
             UpdateWidgetWorker.runNow(context)
         }
     }

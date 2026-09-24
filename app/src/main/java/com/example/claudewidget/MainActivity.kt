@@ -77,6 +77,12 @@ class MainActivity : AppCompatActivity() {
 
         sharedPrefs = getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
 
+        // Keep the periodic refresh on the current request (constraints, backoff) after an update.
+        // Logging in schedules it the first time.
+        if (isClaudeLoggedIn() || isChatGptLoggedIn()) {
+            UpdateWidgetWorker.schedulePeriodic(this)
+        }
+
         // Enable WebView debugging for Chrome DevTools
         WebView.setWebContentsDebuggingEnabled(true)
         CookieManager.getInstance().setAcceptCookie(true)

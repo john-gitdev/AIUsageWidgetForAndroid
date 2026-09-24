@@ -17,6 +17,31 @@ signing certificate, so installing 1.0.9 over an older build fails until the old
 removed. Uninstalling clears app data, so you will need to sign in to Claude and ChatGPT
 again — once.
 
+## [1.1.0] - 2026-09-22
+
+### Changed
+- **New app icon:** an hourglass with "AI" across it, on a navy background. The artwork
+  is centered on the hourglass itself, so it sits in the middle of the launcher's circle or
+  rounded-square mask; the old gauge icon rode low. Themed (monochrome) icons on Android 13+
+  get a matching single-color hourglass.
+
+### Fixed
+- **Widgets no longer show "Error" when the connection drops for a moment**, such as
+  moving from Wi-Fi to mobile data. Refreshes used to run with or without a connection, so
+  a run that landed mid-handover failed with `UnknownHostException` and replaced the
+  readings with "Error" until the next refresh. Now:
+  - Refreshes wait for a working connection before they run.
+  - If the server still can't be reached, the refresh is retried a few times with backoff
+    (15 s, 30 s, 60 s).
+  - After that, the widget keeps its last readings and shows `Offline · 5:35 PM` (the time
+    those readings are from). "Error" appears only if there were no readings to keep.
+  - Tapping refresh with no connection shows "Waiting for network..." and refreshes by
+    itself once the connection is back. Repeated taps no longer queue up extra refreshes.
+  - The log records retries as warnings, and gives up with an error after the last try.
+- **ChatGPT no longer says "Session expired" when the connection drops while it's
+  renewing its access token.** A network failure there is now handled like any other
+  offline refresh.
+
 ## [1.0.9] - 2026-09-22
 
 ### Changed
@@ -125,6 +150,7 @@ Updates after this one will not need any of that.
 
 Initial release.
 
+[1.1.0]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.9...v1.1.0
 [1.0.9]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.6...v1.0.7

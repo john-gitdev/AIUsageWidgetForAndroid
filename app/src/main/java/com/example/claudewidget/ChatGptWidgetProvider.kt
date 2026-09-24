@@ -83,8 +83,8 @@ class ChatGptWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
 
-        /** Show a "Refreshing..." state on the widget immediately */
-        fun showRefreshingState(context: Context) {
+        /** Show a "Refreshing..." state (or another [status], like "Waiting for network...") on the widget immediately */
+        fun showRefreshingState(context: Context, status: String = "Refreshing...") {
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, ChatGptWidgetProvider::class.java))
             for (id in ids) {
@@ -122,9 +122,9 @@ class ChatGptWidgetProvider : AppWidgetProvider() {
                     ))
                 }
 
-                views.setTextViewText(R.id.tv_session_reset, "Refreshing...")
-                views.setTextViewText(R.id.tv_weekly_reset, "Refreshing...")
-                views.setTextViewText(R.id.tv_last_update, "Refreshing...")
+                views.setTextViewText(R.id.tv_session_reset, status)
+                views.setTextViewText(R.id.tv_weekly_reset, status)
+                views.setTextViewText(R.id.tv_last_update, status)
                 mgr.updateAppWidget(id, views)
             }
         }
@@ -145,8 +145,10 @@ class ChatGptWidgetProvider : AppWidgetProvider() {
         if (intent.action == ACTION_REFRESH_CHATGPT) {
             Log.d(TAG, "ChatGPT Refresh tapped!")
             // The worker refreshes every service, so show the refreshing state on all widgets
-            showRefreshingState(context)
-            ClaudeWidgetProvider.showRefreshingState(context)
+            // When offline, the refresh waits for a connection instead of failing, so say that
+            val status = if (UpdateWidgetWorker.hasUsableNetwork(context)) "Refreshing..." else "Waiting for network..."
+            showRefreshingState(context, status)
+            ClaudeWidgetProvider.showRefreshingState(context, status)
             UpdateWidgetWorker.runNowChatGpt(context)
         }
     }
