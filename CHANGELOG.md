@@ -17,6 +17,17 @@ signing certificate, so installing 1.0.9 over an older build fails until the old
 removed. Uninstalling clears app data, so you will need to sign in to Claude and ChatGPT
 again — once.
 
+## [1.1.4] - 2026-09-28
+
+### Changed
+- **Quota notifications now show the next relevant reset in the title** instead of the last refresh time.
+  If weekly quota is exhausted (100% used), the title shows the weekly reset; otherwise it shows
+  the session reset. Same-day resets show only the local time, while later resets show the abbreviated weekday before the time (for example `Tue 3:45 PM`).
+- **Reset timestamps are saved directly from each service response** so notification reset times remain
+  exact instead of being reconstructed from relative strings such as `Resets in 4h 12m`. Enabled
+  notifications automatically request one refresh after upgrading from older saved data.
+- **Refresh when screen turns on uses a neutral gray checkmark** instead of the green checked state.
+
 ## [1.1.3] - 2026-09-28
 
 ### Added
@@ -196,7 +207,10 @@ Updates after this one will not need any of that.
 
 Initial release.
 
-[1.1.3]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.0...v1.1.3
+[1.1.4]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.3...v1.1.4
+[1.1.3]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.2...v1.1.3
+[1.1.2]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.1...v1.1.2
+[1.1.1]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.9...v1.1.0
 [1.0.9]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.7...v1.0.8

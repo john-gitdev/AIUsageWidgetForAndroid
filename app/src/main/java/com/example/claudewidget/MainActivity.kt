@@ -460,7 +460,7 @@ class MainActivity : AppCompatActivity() {
         val screenOnBox = findViewById<CheckBox>(R.id.cb_refresh_on_screen)
         screenOnBox.buttonTintList = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-            intArrayOf(0xFF4CAF50.toInt(), 0xFF808080.toInt())
+            intArrayOf(0xFFB0B0B0.toInt(), 0xFF808080.toInt())
         )
         screenOnBox.setOnCheckedChangeListener(null)
         screenOnBox.isChecked = sharedPrefs.getBoolean("refresh_on_screen_on", false)

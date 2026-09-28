@@ -10,6 +10,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * Optional persistent quota notifications, one per service.
@@ -38,13 +43,24 @@ object QuotaNotifications {
 
     fun setEnabled(context: Context, service: String, enabled: Boolean) {
         prefs(context).edit().putBoolean(prefKey(service), enabled).apply()
-        if (enabled) updateService(context, service) else cancel(context, service)
+        if (enabled) {
+            updateService(context, service)
+            if (needsResetTimestamp(context, service)) UpdateWidgetWorker.runNow(context)
+        } else {
+            cancel(context, service)
+        }
     }
 
     /** Re-post enabled notifications after app start/update, if notification permission is available. */
     fun restoreEnabled(context: Context) {
         updateService(context, "claude")
         updateService(context, "chatgpt")
+
+        // 1.1.3 stored only relative reset text. After upgrading, fetch once so enabled
+        // notifications get an exact absolute reset timestamp without waiting for the next interval.
+        if (needsResetTimestamp(context, "claude") || needsResetTimestamp(context, "chatgpt")) {
+            UpdateWidgetWorker.runNow(context)
+        }
     }
 
     fun cancel(context: Context, service: String) {
@@ -84,8 +100,8 @@ object QuotaNotifications {
         )
         val sessionReset = prefs.getString("${prefix}session_reset", "Tap refresh") ?: "Tap refresh"
         val weeklyReset = prefs.getString("${prefix}weekly_reset", "Tap refresh") ?: "Tap refresh"
-        val refreshedAt = prefs.getString("${prefix}updated_at", null) ?: "Never"
         val name = if (service == "chatgpt") "ChatGPT" else "Claude"
+        val nextReset = nextResetLabel(prefs, prefix, weeklyUsed)
 
         val compact = "Session $sessionText · Weekly $weeklyText"
         val expanded = buildString {
@@ -97,7 +113,7 @@ object QuotaNotifications {
         NotificationManagerCompat.from(context).notify(
             notificationId(service),
             baseBuilder(context, service)
-                .setContentTitle("$name Quota - Refreshed: $refreshedAt")
+                .setContentTitle("$name - Next Reset: $nextReset")
                 .setContentText(compact)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(expanded))
                 .build()
@@ -113,14 +129,57 @@ object QuotaNotifications {
         ensureChannel(context)
         val name = if (service == "chatgpt") "ChatGPT" else "Claude"
         val prefix = if (service == "chatgpt") "chatgpt_" else ""
-        val refreshedAt = prefs.getString("${prefix}updated_at", null) ?: "Never"
+        val weeklyUsed = prefs.getInt("${prefix}weekly_prog", 0)
+        val nextReset = nextResetLabel(prefs, prefix, weeklyUsed)
         NotificationManagerCompat.from(context).notify(
             notificationId(service),
             baseBuilder(context, service)
-                .setContentTitle("$name Quota - Refreshed: $refreshedAt")
+                .setContentTitle("$name - Next Reset: $nextReset")
                 .setContentText("Refreshing quota…")
                 .build()
         )
+    }
+
+    /**
+     * Weekly exhaustion takes priority because the session reset cannot restore usable quota while
+     * the weekly window is still exhausted. Otherwise the session window is the next useful reset.
+     */
+    private fun nextResetLabel(
+        prefs: android.content.SharedPreferences,
+        prefix: String,
+        weeklyUsed: Int
+    ): String {
+        val resetEpochMs = nextResetEpochMs(prefs, prefix, weeklyUsed)
+        if (resetEpochMs <= 0L) return "Refresh needed"
+
+        val zone = ZoneId.systemDefault()
+        val reset = Instant.ofEpochMilli(resetEpochMs).atZone(zone)
+        val now = ZonedDateTime.now(zone)
+        val pattern = if (reset.toLocalDate() == now.toLocalDate()) {
+            "h:mm a"
+        } else {
+            "EEE h:mm a"
+        }
+        return reset.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
+    }
+
+    private fun nextResetEpochMs(
+        prefs: android.content.SharedPreferences,
+        prefix: String,
+        weeklyUsed: Int
+    ): Long = if (weeklyUsed >= 100) {
+        prefs.getLong("${prefix}weekly_reset_epoch_ms", 0L)
+    } else {
+        prefs.getLong("${prefix}session_reset_epoch_ms", 0L)
+    }
+
+    private fun needsResetTimestamp(context: Context, service: String): Boolean {
+        if (!isEnabled(context, service)) return false
+        val prefs = prefs(context)
+        if (!isLoggedIn(prefs, service)) return false
+        val prefix = if (service == "chatgpt") "chatgpt_" else ""
+        val weeklyUsed = prefs.getInt("${prefix}weekly_prog", 0)
+        return nextResetEpochMs(prefs, prefix, weeklyUsed) <= 0L
     }
 
     fun canPostNotifications(context: Context): Boolean {

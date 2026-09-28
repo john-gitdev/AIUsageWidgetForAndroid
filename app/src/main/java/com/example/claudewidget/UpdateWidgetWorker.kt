@@ -143,6 +143,28 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
         }
     }
 
+    private fun parseIsoResetEpochMs(isoString: String): Long {
+        if (isoString.isEmpty() || isoString == "null") return 0L
+        return try {
+            ZonedDateTime.parse(isoString, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                .toInstant()
+                .toEpochMilli()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse reset timestamp: $isoString", e)
+            0L
+        }
+    }
+
+    private fun resolveEpochResetMs(resetAt: Long, fallbackSeconds: Long): Long {
+        val nowMs = System.currentTimeMillis()
+        val nowSec = nowMs / 1000
+        return when {
+            resetAt > nowSec -> resetAt * 1000L
+            fallbackSeconds > 0 -> nowMs + fallbackSeconds * 1000L
+            else -> 0L
+        }
+    }
+
     private fun formatEpochResetTime(resetAt: Long, fallbackSeconds: Long): String {
         val nowSec = System.currentTimeMillis() / 1000
         val remaining = if (resetAt > nowSec) {
@@ -354,9 +376,11 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             var sessionPct = "0% used"
             var sessionProg = 0
             var sessionReset = "No limit"
+            var sessionResetEpochMs = 0L
             var weeklyPct = "0% used"
             var weeklyProg = 0
             var weeklyReset = "No limit"
+            var weeklyResetEpochMs = 0L
 
             if (limits != null) {
                 for (i in 0 until limits.length()) {
@@ -369,10 +393,12 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                         sessionProg = percent
                         sessionPct = "$percent% used"
                         sessionReset = formatResetTime(resetsAt)
+                        sessionResetEpochMs = parseIsoResetEpochMs(resetsAt)
                     } else if (group == "weekly") {
                         weeklyProg = percent
                         weeklyPct = "$percent% used"
                         weeklyReset = formatResetTime(resetsAt)
+                        weeklyResetEpochMs = parseIsoResetEpochMs(resetsAt)
                     }
                 }
             }
@@ -382,9 +408,11 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .putString("session_pct", sessionPct)
                 .putString("session_reset", sessionReset)
                 .putInt("session_prog", sessionProg)
+                .putLong("session_reset_epoch_ms", sessionResetEpochMs)
                 .putString("weekly_pct", weeklyPct)
                 .putString("weekly_reset", weeklyReset)
                 .putInt("weekly_prog", weeklyProg)
+                .putLong("weekly_reset_epoch_ms", weeklyResetEpochMs)
                 .putString("last_update", "Updated $updatedAt")
                 .putString("updated_at", updatedAt)
                 .putLong("last_successful_refresh_epoch_ms", System.currentTimeMillis())
@@ -462,9 +490,11 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             var sessionPct = "0% used"
             var sessionProg = 0
             var sessionReset = "No limit"
+            var sessionResetEpochMs = 0L
             var weeklyPct = "0% used"
             var weeklyProg = 0
             var weeklyReset = "No limit"
+            var weeklyResetEpochMs = 0L
 
             if (rateLimit != null) {
                 val primary = rateLimit.optJSONObject("primary_window")
@@ -474,6 +504,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                     val resetAt = primary.optLong("reset_at", 0L)
                     val resetSecs = primary.optLong("reset_after_seconds", 0L)
                     sessionReset = formatEpochResetTime(resetAt, resetSecs)
+                    sessionResetEpochMs = resolveEpochResetMs(resetAt, resetSecs)
                 }
 
                 val secondary = rateLimit.optJSONObject("secondary_window")
@@ -483,6 +514,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                     val resetAt = secondary.optLong("reset_at", 0L)
                     val resetSecs = secondary.optLong("reset_after_seconds", 0L)
                     weeklyReset = formatEpochResetTime(resetAt, resetSecs)
+                    weeklyResetEpochMs = resolveEpochResetMs(resetAt, resetSecs)
                 }
             }
 
@@ -491,9 +523,11 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .putString("chatgpt_session_pct", sessionPct)
                 .putString("chatgpt_session_reset", sessionReset)
                 .putInt("chatgpt_session_prog", sessionProg)
+                .putLong("chatgpt_session_reset_epoch_ms", sessionResetEpochMs)
                 .putString("chatgpt_weekly_pct", weeklyPct)
                 .putString("chatgpt_weekly_reset", weeklyReset)
                 .putInt("chatgpt_weekly_prog", weeklyProg)
+                .putLong("chatgpt_weekly_reset_epoch_ms", weeklyResetEpochMs)
                 .putString("chatgpt_last_update", "Updated $updatedAt")
                 .putString("chatgpt_updated_at", updatedAt)
                 .putLong("last_successful_refresh_epoch_ms", System.currentTimeMillis())
