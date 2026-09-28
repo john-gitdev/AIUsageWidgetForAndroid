@@ -144,9 +144,9 @@ class ChatGptWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH_CHATGPT) {
             Log.d(TAG, "ChatGPT Refresh tapped!")
-            // The worker refreshes every service, so show the refreshing state on all widgets
-            // When offline, the refresh waits for a connection instead of failing, so say that
-            val status = if (UpdateWidgetWorker.hasUsableNetwork(context)) "Refreshing..." else "Waiting for network..."
+            // Manual refresh starts immediately. Do not gate this on Android's network-validation
+            // state because it can lag behind a usable cellular connection during Wi-Fi handoff.
+            val status = "Refreshing..."
             showRefreshingState(context, status)
             ClaudeWidgetProvider.showRefreshingState(context, status)
             UpdateWidgetWorker.runNowChatGpt(context)

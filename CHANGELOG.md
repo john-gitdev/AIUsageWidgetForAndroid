@@ -17,6 +17,52 @@ signing certificate, so installing 1.0.9 over an older build fails until the old
 removed. Uninstalling clears app data, so you will need to sign in to Claude and ChatGPT
 again — once.
 
+## [1.1.3] - 2026-09-28
+
+### Added
+- **Shared Settings tab.** The former Log tab is now a Settings tab containing the shared
+  auto-refresh interval, widget tap action, screen-on refresh option, and the View Log button.
+- **Optional refresh when the screen turns on.** When enabled, the app dynamically listens for
+  screen-on events while Android keeps the app process alive and triggers the same one-shot refresh
+  used by manual refresh. A two-minute cooldown avoids redundant wake refreshes after a recent
+  successful update.
+
+### Changed
+- **Notification timestamps moved into the title**, for example
+  `Claude Quota - Refreshed: 10:26 AM`.
+- **Notification opt-ins are service-specific in the UI.** The Claude tab shows only the Claude
+  ongoing-notification checkbox; the ChatGPT tab shows only the ChatGPT checkbox.
+- **Tapping a quota notification now opens the app on that service's tab.** Refreshing remains an
+  explicit **Refresh** notification action.
+- **Auto refresh is now clearly shared by widgets and enabled notifications.** Both are updated by
+  the same WorkManager refresh worker.
+
+## [1.1.2] - 2026-09-28
+
+### Changed
+- **Ongoing notifications are now an explicit Settings opt-in.** The Settings screen shows
+  separate Claude and ChatGPT checkboxes at the same time. Both default to off; unchecking one
+  immediately removes that service's notification, and denying Android's notification permission
+  leaves the checkbox off.
+- **Manual GitHub Actions builds now upload the signed release APK as an artifact.** This gives
+  test builds the same release signature as installed 1.0.9+ versions, avoiding Android's
+  "package conflicts with an existing package" error caused by installing a locally debug-signed APK.
+
+## [1.1.1] - 2026-09-28
+
+### Added
+- **Optional ongoing quota notifications for Claude and ChatGPT.** Each service has its own
+  setting and its own low-priority notification showing the same session/weekly usage and
+  reset information as the widget. Tapping the notification or its **Refresh** action runs
+  a manual refresh. On Android versions that allow ongoing notifications to be swiped away,
+  an enabled notification posts itself again after dismissal.
+
+### Fixed
+- **Manual refresh no longer gets stuck behind Android's network state after Wi-Fi → mobile
+  handoff.** Manual taps now start the worker immediately and let the actual HTTP request use
+  the current default network. Periodic work still requires a connected network. A real
+  handoff failure still keeps the last readings and uses the existing retry/backoff path.
+
 ## [1.1.0] - 2026-09-22
 
 ### Changed
@@ -150,6 +196,7 @@ Updates after this one will not need any of that.
 
 Initial release.
 
+[1.1.3]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.0...v1.1.3
 [1.1.0]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.9...v1.1.0
 [1.0.9]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.8...v1.0.9
 [1.0.8]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.0.7...v1.0.8

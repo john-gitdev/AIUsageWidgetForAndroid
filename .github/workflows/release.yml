@@ -86,6 +86,14 @@ jobs:
         fi
         rm -f certs.txt
 
+    - name: Upload signed APK for manual test builds
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v7
+      with:
+        name: AIUsageWidget-signed-${{ github.sha }}
+        path: app/build/outputs/apk/release/app-release.apk
+        if-no-files-found: error
+
     - name: Remove keystore from runner
       if: always()
       run: rm -f "$RUNNER_TEMP/release.jks"

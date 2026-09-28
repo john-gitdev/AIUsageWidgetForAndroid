@@ -25,6 +25,16 @@ object UsageDisplay {
      * [stored] is the text the worker saved, e.g. "12% used". Placeholders like "--" or "Error"
      * aren't readings, so they're shown as-is and never flipped.
      */
+    fun text(stored: String?, usedPercent: Int, showLeft: Boolean): String {
+        val value = stored ?: "--"
+        return if (showLeft && value.endsWith("% used")) {
+            val left = (100 - usedPercent).coerceIn(0, 100)
+            "$left% left"
+        } else {
+            value
+        }
+    }
+
     fun bind(
         views: RemoteViews,
         pctId: Int,
@@ -33,14 +43,13 @@ object UsageDisplay {
         usedPercent: Int,
         showLeft: Boolean
     ) {
-        val text = stored ?: "--"
-        if (showLeft && text.endsWith("% used")) {
-            val left = (100 - usedPercent).coerceIn(0, 100)
-            views.setTextViewText(pctId, "$left% left")
-            views.setProgressBar(barId, 100, left, false)
+        val displayText = text(stored, usedPercent, showLeft)
+        val progress = if (showLeft && (stored ?: "").endsWith("% used")) {
+            (100 - usedPercent).coerceIn(0, 100)
         } else {
-            views.setTextViewText(pctId, text)
-            views.setProgressBar(barId, 100, usedPercent, false)
+            usedPercent
         }
+        views.setTextViewText(pctId, displayText)
+        views.setProgressBar(barId, 100, progress, false)
     }
 }

@@ -1,9 +1,11 @@
 package com.example.claudewidget
 
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
 import android.graphics.Typeface
@@ -41,6 +43,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val EXTRA_TARGET_TAB = "target_tab"
+        private const val NOTIFICATION_PERMISSION_REQUEST = 1001
 
         /**
          * Opens the app on [tab] ("claude" or "chatgpt"). If the app is already open, CLEAR_TOP + SINGLE_TOP
@@ -57,7 +60,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var claudeBrowser: LoginBrowser
     private lateinit var chatGptBrowser: LoginBrowser
 
-    private var currentTab: String = "claude" // "claude" or "chatgpt"
+    private var currentTab: String = "claude" // "claude", "chatgpt", or "settings"
+    private var pendingNotificationService: String? = null
 
     private val loginCheckHandler = Handler(Looper.getMainLooper())
 
@@ -76,6 +80,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         sharedPrefs = getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
+        QuotaNotifications.restoreEnabled(this)
 
         // Keep the periodic refresh on the current request (constraints, backoff) after an update.
         // Logging in schedules it the first time.
@@ -123,7 +128,7 @@ class MainActivity : AppCompatActivity() {
     private fun targetTabFrom(intent: Intent?): String? {
         val tab = intent?.getStringExtra(EXTRA_TARGET_TAB) ?: return null
         val service = if (tab == "chatgpt") "chatgpt" else "claude"
-        AppLog.i(this, "App", "Opened from the ${serviceName(service)} widget")
+        AppLog.i(this, "App", "Opened ${serviceName(service)} tab")
         return service
     }
 
@@ -155,20 +160,48 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tab_chatgpt).setOnClickListener {
             switchTab("chatgpt")
         }
-        findViewById<TextView>(R.id.tab_log).setOnClickListener {
-            showLogDialog()
+        findViewById<TextView>(R.id.tab_settings).setOnClickListener {
+            switchTab("settings")
         }
     }
 
     private fun switchTab(tab: String) {
         currentTab = tab
-        val selected = findViewById<TextView>(if (tab == "claude") R.id.tab_claude else R.id.tab_chatgpt)
-        val other = findViewById<TextView>(if (tab == "claude") R.id.tab_chatgpt else R.id.tab_claude)
-        selected.setBackgroundColor(accentColor(tab))
-        selected.setTextColor(0xFFFFFFFF.toInt())
-        other.setBackgroundColor(0xFF222222.toInt())
-        other.setTextColor(0xFF888888.toInt())
 
+        val tabs = mapOf(
+            "claude" to R.id.tab_claude,
+            "chatgpt" to R.id.tab_chatgpt,
+            "settings" to R.id.tab_settings
+        )
+        tabs.forEach { (name, viewId) ->
+            findViewById<TextView>(viewId).apply {
+                val selected = name == tab
+                setBackgroundColor(
+                    if (selected) {
+                        when (name) {
+                            "claude" -> accentColor("claude")
+                            "chatgpt" -> accentColor("chatgpt")
+                            else -> 0xFF4A4A4A.toInt()
+                        }
+                    } else {
+                        0xFF222222.toInt()
+                    }
+                )
+                setTextColor(if (selected) 0xFFFFFFFF.toInt() else 0xFF888888.toInt())
+            }
+        }
+
+        if (tab == "settings") {
+            findViewById<View>(R.id.loadingLayout).visibility = View.GONE
+            findViewById<View>(R.id.successLayout).visibility = View.GONE
+            findViewById<View>(R.id.settingsLayout).visibility = View.VISIBLE
+            claudeBrowser.frame.visibility = View.GONE
+            chatGptBrowser.frame.visibility = View.GONE
+            setupSharedSettings()
+            return
+        }
+
+        findViewById<View>(R.id.settingsLayout).visibility = View.GONE
         if (isLoggedIn(tab)) {
             showSuccessScreen()
         } else {
@@ -235,10 +268,10 @@ class MainActivity : AppCompatActivity() {
         icon.setTextColor(0xFFFFB300.toInt())
         if (reason.contains("expired", ignoreCase = true) || reason.contains("log in", ignoreCase = true)) {
             title.text = "$name Session Expired"
-            subtitle.text = "Tap Re-login below to sign in again. Tap Log at the top for details."
+            subtitle.text = "Tap Re-login below to sign in again. Open Settings > View Log for details."
         } else {
             title.text = "$name Refresh Failed"
-            subtitle.text = "$reason. Tap refresh on the widget to try again, or tap Log at the top for details."
+            subtitle.text = "$reason. Tap refresh on the widget to try again, or open Settings > View Log for details."
         }
     }
 
@@ -289,6 +322,7 @@ class MainActivity : AppCompatActivity() {
             editor.remove("chatgpt_access_token").remove("chatgpt_saved_cookies").remove("chatgpt_user_agent")
         }
         editor.apply()
+        QuotaNotifications.cancel(this, service)
     }
 
     /** Deletes [service]'s cookies and web storage, leaving the other service and the Google sign-in alone. */
@@ -372,10 +406,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             ChatGptWidgetProvider.updateAllWidgets(this)
         }
+        QuotaNotifications.updateService(this, service)
     }
 
-    private fun setupSettings() {
-        // ---- Refresh Interval Spinner ----
+    private fun setupSharedSettings() {
+        // ---- Shared auto-refresh interval ----
         val spinner = findViewById<Spinner>(R.id.spinner_interval)
         val labels = intervalOptions.map { it.first }
         val adapter = ArrayAdapter(this, R.layout.spinner_item, labels)
@@ -389,17 +424,66 @@ class MainActivity : AppCompatActivity() {
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val newInterval = intervalOptions[position].second
-                // Compare against the saved value (not currentInterval) so switching back and forth works
                 if (newInterval != sharedPrefs.getLong("refresh_interval_minutes", 15L)) {
                     UpdateWidgetWorker.rescheduleWork(this@MainActivity, newInterval)
-                    Log.d("ClaudeWidget", "Interval changed to ${newInterval}m")
+                    AppLog.i(this@MainActivity, "Settings", "Auto refresh interval changed to ${newInterval}m")
                 }
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // ---- Usage Display Spinner (per service: applies to this tab's widget only) ----
+        // ---- Shared widget tap action ----
+        val tapOptions = listOf("Refresh Status" to "refresh", "Open App" to "open_app")
+        val tapSpinner = findViewById<Spinner>(R.id.spinner_tap_action)
+        val tapLabels = tapOptions.map { it.first }
+        val tapAdapter = ArrayAdapter(this, R.layout.spinner_item, tapLabels)
+        tapAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        tapSpinner.adapter = tapAdapter
+
+        val currentTapAction = sharedPrefs.getString("tap_action", "refresh")
+        val tapSelectedIndex = tapOptions.indexOfFirst { it.second == currentTapAction }.coerceAtLeast(0)
+        tapSpinner.setSelection(tapSelectedIndex)
+
+        tapSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val newAction = tapOptions[position].second
+                if (newAction != sharedPrefs.getString("tap_action", "refresh")) {
+                    sharedPrefs.edit().putString("tap_action", newAction).apply()
+                    ClaudeWidgetProvider.updateAllWidgets(this@MainActivity)
+                    ChatGptWidgetProvider.updateAllWidgets(this@MainActivity)
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        // ---- Best-effort refresh when the screen turns on ----
+        val screenOnBox = findViewById<CheckBox>(R.id.cb_refresh_on_screen)
+        screenOnBox.buttonTintList = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(0xFF4CAF50.toInt(), 0xFF808080.toInt())
+        )
+        screenOnBox.setOnCheckedChangeListener(null)
+        screenOnBox.isChecked = sharedPrefs.getBoolean("refresh_on_screen_on", false)
+        screenOnBox.setOnCheckedChangeListener { _, checked ->
+            sharedPrefs.edit().putBoolean("refresh_on_screen_on", checked).apply()
+            AppLog.i(
+                this,
+                "Settings",
+                "Refresh when screen turns on ${if (checked) "enabled" else "disabled"}"
+            )
+        }
+
+        findViewById<View>(R.id.btn_view_log).setOnClickListener {
+            showLogDialog()
+        }
+    }
+
+    private fun setupSettings() {
+        // ---- Service-specific settings ----
         val service = currentTab
+        findViewById<TextView>(R.id.tv_service_settings_title).text = "${serviceName(service)} Settings"
+
+        // ---- Usage Display Spinner (per service: applies to this tab's widget only) ----
         findViewById<TextView>(R.id.tv_usage_display_title).text = "Show ${serviceName(service)} Usage As"
 
         val displayOptions = listOf("Percent used" to "used", "Percent left" to "left")
@@ -455,30 +539,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ---- Tap Action Spinner ----
-        val tapOptions = listOf("Refresh Status" to "refresh", "Open App" to "open_app")
-        val tapSpinner = findViewById<Spinner>(R.id.spinner_tap_action)
-        val tapLabels = tapOptions.map { it.first }
-        val tapAdapter = ArrayAdapter(this, R.layout.spinner_item, tapLabels)
-        tapAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
-        tapSpinner.adapter = tapAdapter
-
-        val currentTapAction = sharedPrefs.getString("tap_action", "refresh")
-        val tapSelectedIndex = tapOptions.indexOfFirst { it.second == currentTapAction }.coerceAtLeast(0)
-        tapSpinner.setSelection(tapSelectedIndex)
-
-        tapSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val newAction = tapOptions[position].second
-                // Compare against the saved value (not currentTapAction) so switching back and forth works
-                if (newAction != sharedPrefs.getString("tap_action", "refresh")) {
-                    sharedPrefs.edit().putString("tap_action", newAction).apply()
-                    ClaudeWidgetProvider.updateAllWidgets(this@MainActivity)
-                    ChatGptWidgetProvider.updateAllWidgets(this@MainActivity)
-                }
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
+        // ---- Ongoing quota notification (only the current service appears on this tab) ----
+        setupNotificationCheckbox(service, R.id.cb_notification_service)
 
         // ---- Re-login button (clears this service's session only, preserves Google account) ----
         findViewById<View>(R.id.btn_relogin).setOnClickListener {
@@ -778,6 +840,60 @@ class MainActivity : AppCompatActivity() {
             showSuccessScreen()
         }
         UpdateWidgetWorker.enqueueWork(this)
+    }
+
+    private fun setupNotificationCheckbox(service: String, viewId: Int) {
+        val box = findViewById<CheckBox>(viewId)
+        box.text = "${serviceName(service)} ongoing notification"
+        box.buttonTintList = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(accentColor(service), 0xFF808080.toInt())
+        )
+        box.setOnCheckedChangeListener(null)
+        box.isChecked = QuotaNotifications.isEnabled(this, service)
+        box.setOnCheckedChangeListener { _, checked ->
+            if (!checked) {
+                if (pendingNotificationService == service) pendingNotificationService = null
+                QuotaNotifications.setEnabled(this, service, false)
+                return@setOnCheckedChangeListener
+            }
+
+            if (QuotaNotifications.canPostNotifications(this)) {
+                QuotaNotifications.setEnabled(this, service, true)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Do not persist the opt-in until Android actually grants notification permission.
+                pendingNotificationService = service
+                requestPermissions(
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST
+                )
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != NOTIFICATION_PERMISSION_REQUEST) return
+
+        val service = pendingNotificationService
+        pendingNotificationService = null
+        val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+
+        if (service != null && granted) {
+            QuotaNotifications.setEnabled(this, service, true)
+        } else if (service != null) {
+            QuotaNotifications.setEnabled(this, service, false)
+            Toast.makeText(this, "Notification permission is required for ongoing quota status", Toast.LENGTH_LONG).show()
+        }
+        if (findViewById<View>(R.id.successLayout).visibility == View.VISIBLE) {
+            // Re-bind from the persisted state so a denied permission immediately returns
+            // the attempted checkbox to OFF.
+            setupSettings()
+        }
     }
 
     override fun onPause() {

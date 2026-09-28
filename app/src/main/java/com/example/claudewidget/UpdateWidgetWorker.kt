@@ -2,8 +2,6 @@ package com.example.claudewidget
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -46,11 +44,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
         private const val MAX_ATTEMPTS = 4
         private const val BACKOFF_SECONDS = 15L
 
-        /**
-         * Only run while the system reports a working connection that the app is allowed to use.
-         * Without this, runs fired mid-handover or while the app's network was blocked in the
-         * background, and every request failed with UnknownHostException.
-         */
+        /** Periodic work should wait for connectivity instead of waking up just to fail. */
         private val networkConstraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
@@ -61,24 +55,17 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
                 .build()
 
-        /** Run once now, or as soon as there is a connection. Replaces a run still waiting on one. */
+        /**
+         * Manual refreshes intentionally have no WorkManager network constraint. During Wi-Fi ->
+         * cellular handoff, Android's constraint/validation state can lag behind a connection that
+         * apps can already use. Starting immediately lets OkHttp use the current default network; a
+         * genuine handoff failure still comes back as IOException and uses the normal retry/backoff.
+         */
         fun runNow(context: Context) {
             val request = OneTimeWorkRequestBuilder<UpdateWidgetWorker>()
-                .setConstraints(networkConstraints)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork(REFRESH_NOW_WORK, ExistingWorkPolicy.REPLACE, request)
-        }
-
-        /**
-         * Whether the device has a validated connection this app can use right now (the same test
-         * [networkConstraints] applies). Used to tell a tap "Waiting for network" from "Refreshing".
-         * getActiveNetwork() returns null when the app's access to the default network is blocked.
-         */
-        fun hasUsableNetwork(context: Context): Boolean {
-            val cm = context.getSystemService(ConnectivityManager::class.java) ?: return true
-            val caps = cm.getNetworkCapabilities(cm.activeNetwork ?: return false) ?: return false
-            return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         }
 
         fun runNowClaude(context: Context) {
@@ -192,6 +179,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             .putInt("weekly_prog", 0)
             .apply()
         ClaudeWidgetProvider.updateAllWidgets(applicationContext)
+        QuotaNotifications.updateService(applicationContext, "claude")
     }
 
     /** Shows [message] on the ChatGPT widget and records [detail] in the in-app log. */
@@ -207,6 +195,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             .putInt("chatgpt_weekly_prog", 0)
             .apply()
         ChatGptWidgetProvider.updateAllWidgets(applicationContext)
+        QuotaNotifications.updateService(applicationContext, "chatgpt")
     }
 
     /** How one service's refresh went. OFFLINE (the server couldn't be reached) is worth retrying. */
@@ -242,8 +231,13 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .apply()
         }
         // Redraw either way, so a tap's "Refreshing..." gives way to the saved readings
-        if (prefix.isEmpty()) ClaudeWidgetProvider.updateAllWidgets(applicationContext)
-        else ChatGptWidgetProvider.updateAllWidgets(applicationContext)
+        if (prefix.isEmpty()) {
+            ClaudeWidgetProvider.updateAllWidgets(applicationContext)
+            QuotaNotifications.updateService(applicationContext, "claude")
+        } else {
+            ChatGptWidgetProvider.updateAllWidgets(applicationContext)
+            QuotaNotifications.updateService(applicationContext, "chatgpt")
+        }
         return Outcome.OFFLINE
     }
 
@@ -275,6 +269,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
         } else {
             // Not logged in — redraw anyway so the widget doesn't stay stuck on "Refreshing..."
             ClaudeWidgetProvider.updateAllWidgets(applicationContext)
+            QuotaNotifications.cancel(applicationContext, "claude")
         }
 
         // 2. Update ChatGPT if configured
@@ -285,6 +280,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             chatGptOutcome = updateChatGpt(client, prefs, defaultUa, chatGptToken, chatGptCookies)
         } else {
             ChatGptWidgetProvider.updateAllWidgets(applicationContext)
+            QuotaNotifications.cancel(applicationContext, "chatgpt")
         }
 
         // Retrying refreshes both services, which is harmless for the one that already worked
@@ -391,9 +387,11 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .putInt("weekly_prog", weeklyProg)
                 .putString("last_update", "Updated $updatedAt")
                 .putString("updated_at", updatedAt)
+                .putLong("last_successful_refresh_epoch_ms", System.currentTimeMillis())
                 .apply()
 
             ClaudeWidgetProvider.updateAllWidgets(applicationContext)
+            QuotaNotifications.updateService(applicationContext, "claude")
             AppLog.i(applicationContext, "Claude", "Updated: session $sessionPct, weekly $weeklyPct")
             return Outcome.UPDATED
 
@@ -498,9 +496,11 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .putInt("chatgpt_weekly_prog", weeklyProg)
                 .putString("chatgpt_last_update", "Updated $updatedAt")
                 .putString("chatgpt_updated_at", updatedAt)
+                .putLong("last_successful_refresh_epoch_ms", System.currentTimeMillis())
                 .apply()
 
             ChatGptWidgetProvider.updateAllWidgets(applicationContext)
+            QuotaNotifications.updateService(applicationContext, "chatgpt")
             AppLog.i(applicationContext, "ChatGPT", "Updated: session $sessionPct, weekly $weeklyPct")
             return Outcome.UPDATED
 

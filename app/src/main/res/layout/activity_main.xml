@@ -39,14 +39,13 @@
             android:background="#222222"
             android:layout_marginStart="4dp"/>
 
-        <!-- Opens the in-app log -->
         <TextView
-            android:id="@+id/tab_log"
-            android:layout_width="wrap_content"
+            android:id="@+id/tab_settings"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="match_parent"
             android:gravity="center"
-            android:paddingHorizontal="16dp"
-            android:text="Log"
+            android:text="Settings"
             android:textSize="15sp"
             android:textStyle="bold"
             android:textColor="#888888"
@@ -161,50 +160,17 @@
                     android:textColor="#B0B0B0"
                     android:textSize="14sp"/>
 
-                <!-- Settings Section -->
+                <!-- Service-specific Settings Section -->
                 <TextView
+                    android:id="@+id/tv_service_settings_title"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Settings"
+                    android:text="Claude Settings"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="#FFFFFF"
                     android:layout_marginTop="20dp"
                     android:layout_marginBottom="12dp"/>
-
-                <!-- Auto Refresh Interval -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="#2a2a2a"
-                    android:padding="16dp"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Auto Refresh Interval"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:layout_marginBottom="4dp"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="How often widgets automatically update usage data."
-                        android:textColor="#808080"
-                        android:textSize="12sp"
-                        android:layout_marginBottom="12dp"/>
-
-                    <Spinner
-                        android:id="@+id/spinner_interval"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:background="#363636"
-                        android:padding="8dp"
-                        android:popupBackground="#363636"/>
-                </LinearLayout>
 
                 <!-- Usage Display -->
                 <LinearLayout
@@ -251,18 +217,19 @@
                         android:textSize="13sp"/>
                 </LinearLayout>
 
-                <!-- Tap Action -->
+                <!-- Ongoing quota notification for only the current service -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:background="#2a2a2a"
-                    android:padding="16dp">
+                    android:padding="16dp"
+                    android:layout_marginBottom="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Widget Tap Action"
+                        android:text="Ongoing Notification"
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:layout_marginBottom="4dp"/>
@@ -270,18 +237,19 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="What happens when you tap the main body of a widget."
+                        android:text="Off by default. Tap the notification to open this service in the app, or use its Refresh button to update quota."
                         android:textColor="#808080"
                         android:textSize="12sp"
-                        android:layout_marginBottom="12dp"/>
+                        android:layout_marginBottom="8dp"/>
 
-                    <Spinner
-                        android:id="@+id/spinner_tap_action"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:background="#363636"
-                        android:padding="8dp"
-                        android:popupBackground="#363636"/>
+                    <CheckBox
+                        android:id="@+id/cb_notification_service"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minHeight="0dp"
+                        android:text="Claude ongoing notification"
+                        android:textColor="#B0B0B0"
+                        android:textSize="13sp"/>
                 </LinearLayout>
 
                 <!-- Re-login button -->
@@ -314,6 +282,180 @@
                     android:textColor="#666666"
                     android:textSize="13sp"
                     android:layout_marginTop="8dp"/>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Shared Settings -->
+        <ScrollView
+            android:id="@+id/settingsLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#1a1a1a"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="32dp"
+                android:paddingTop="24dp"
+                android:paddingBottom="24dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Settings"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Shared settings for Claude and ChatGPT."
+                    android:textColor="#B0B0B0"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="20dp"/>
+
+                <!-- Shared Auto Refresh Interval -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#2a2a2a"
+                    android:padding="16dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Auto Refresh Interval"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="How often widgets and enabled notifications automatically update quota."
+                        android:textColor="#808080"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_interval"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="#363636"
+                        android:padding="8dp"
+                        android:popupBackground="#363636"/>
+                </LinearLayout>
+
+                <!-- Shared Widget Tap Action -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#2a2a2a"
+                    android:padding="16dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Widget Tap Action"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="What happens when you tap the main body of a widget."
+                        android:textColor="#808080"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Spinner
+                        android:id="@+id/spinner_tap_action"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="#363636"
+                        android:padding="8dp"
+                        android:popupBackground="#363636"/>
+                </LinearLayout>
+
+                <!-- Screen-on refresh -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#2a2a2a"
+                    android:padding="16dp"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Refresh When Screen Turns On"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Best effort while Android keeps the app process available. Skips another screen-on refresh if quota was refreshed in the last 2 minutes."
+                        android:textColor="#808080"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <CheckBox
+                        android:id="@+id/cb_refresh_on_screen"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minHeight="0dp"
+                        android:text="Refresh quota when the screen turns on"
+                        android:textColor="#B0B0B0"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <!-- Log -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#2a2a2a"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Log"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="View, copy, or clear the app refresh and login log."
+                        android:textColor="#808080"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <TextView
+                        android:id="@+id/btn_view_log"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:gravity="center"
+                        android:text="View Log"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:background="#363636"/>
+                </LinearLayout>
 
             </LinearLayout>
         </ScrollView>
