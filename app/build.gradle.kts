@@ -29,8 +29,8 @@ android {
         applicationId = "dev.johngitdev.aiusagewidget"
         minSdk = 26
         targetSdk = 34
-        versionCode = 17
-        versionName = "1.1.4"
+        versionCode = 19
+        versionName = "1.1.6"
     }
 
     signingConfigs {

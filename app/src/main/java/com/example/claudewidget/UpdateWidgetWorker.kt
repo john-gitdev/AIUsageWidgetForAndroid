@@ -166,6 +166,9 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
     }
 
     private fun formatEpochResetTime(resetAt: Long, fallbackSeconds: Long): String {
+        // No absolute reset and no relative fallback is genuinely unknown, not "Resets now".
+        if (resetAt <= 0L && fallbackSeconds <= 0L) return "Unknown"
+
         val nowSec = System.currentTimeMillis() / 1000
         val remaining = if (resetAt > nowSec) {
             resetAt - nowSec
@@ -188,33 +191,39 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
         }
     }
 
-    /** Shows [message] on the Claude widget and records [detail] in the in-app log. */
+    /** Shows an explicit Error state on the Claude widget and records [detail] in the in-app log. */
     private fun setClaudeErrorState(message: String, detail: String, error: Throwable? = null) {
         AppLog.e(applicationContext, "Claude", detail, error)
         val prefs = applicationContext.getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
         prefs.edit()
             .putString("session_pct", "Error")
-            .putString("session_reset", message)
+            .putString("session_reset", "Error")
             .putInt("session_prog", 0)
+            .putLong("session_reset_epoch_ms", 0L)
             .putString("weekly_pct", "Error")
-            .putString("weekly_reset", message)
+            .putString("weekly_reset", "Error")
             .putInt("weekly_prog", 0)
+            .putLong("weekly_reset_epoch_ms", 0L)
+            .putString("claude_error_message", message)
             .apply()
         ClaudeWidgetProvider.updateAllWidgets(applicationContext)
         QuotaNotifications.updateService(applicationContext, "claude")
     }
 
-    /** Shows [message] on the ChatGPT widget and records [detail] in the in-app log. */
+    /** Shows an explicit Error state on the ChatGPT widget and records [detail] in the in-app log. */
     private fun setChatGptErrorState(message: String, detail: String, error: Throwable? = null) {
         AppLog.e(applicationContext, "ChatGPT", detail, error)
         val prefs = applicationContext.getSharedPreferences("ClaudeWidgetPrefs", Context.MODE_PRIVATE)
         prefs.edit()
             .putString("chatgpt_session_pct", "Error")
-            .putString("chatgpt_session_reset", message)
+            .putString("chatgpt_session_reset", "Error")
             .putInt("chatgpt_session_prog", 0)
+            .putLong("chatgpt_session_reset_epoch_ms", 0L)
             .putString("chatgpt_weekly_pct", "Error")
-            .putString("chatgpt_weekly_reset", message)
+            .putString("chatgpt_weekly_reset", "Error")
             .putInt("chatgpt_weekly_prog", 0)
+            .putLong("chatgpt_weekly_reset_epoch_ms", 0L)
+            .putString("chatgpt_error_message", message)
             .apply()
         ChatGptWidgetProvider.updateAllWidgets(applicationContext)
         QuotaNotifications.updateService(applicationContext, "chatgpt")
@@ -403,6 +412,17 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 }
             }
 
+            // Weekly exhaustion takes precedence over the session window because a session reset
+            // cannot restore usable quota while the weekly window is exhausted. Mirror the weekly
+            // reset on the session row so both rows point to the next time quota becomes usable.
+            // Otherwise, a fresh unused session with weekly capacity remaining is simply Ready.
+            if (weeklyProg >= 100) {
+                sessionReset = weeklyReset
+                sessionResetEpochMs = weeklyResetEpochMs
+            } else if (sessionProg == 0 && sessionResetEpochMs > 0L) {
+                sessionReset = "Ready"
+            }
+
             val updatedAt = nowTimestamp()
             prefs.edit()
                 .putString("session_pct", sessionPct)
@@ -416,6 +436,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .putString("last_update", "Updated $updatedAt")
                 .putString("updated_at", updatedAt)
                 .putLong("last_successful_refresh_epoch_ms", System.currentTimeMillis())
+                .remove("claude_error_message")
                 .apply()
 
             ClaudeWidgetProvider.updateAllWidgets(applicationContext)
@@ -518,6 +539,16 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 }
             }
 
+            // Match Claude: weekly exhaustion takes precedence over the otherwise-active session
+            // window. Mirror the weekly reset on the session row because that is the next reset
+            // that can actually restore usable quota. Otherwise, an unused session is Ready.
+            if (weeklyProg >= 100) {
+                sessionReset = weeklyReset
+                sessionResetEpochMs = weeklyResetEpochMs
+            } else if (sessionProg == 0 && sessionResetEpochMs > 0L) {
+                sessionReset = "Ready"
+            }
+
             val updatedAt = nowTimestamp()
             prefs.edit()
                 .putString("chatgpt_session_pct", sessionPct)
@@ -531,6 +562,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                 .putString("chatgpt_last_update", "Updated $updatedAt")
                 .putString("chatgpt_updated_at", updatedAt)
                 .putLong("last_successful_refresh_epoch_ms", System.currentTimeMillis())
+                .remove("chatgpt_error_message")
                 .apply()
 
             ChatGptWidgetProvider.updateAllWidgets(applicationContext)

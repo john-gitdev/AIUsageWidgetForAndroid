@@ -149,8 +149,23 @@ object QuotaNotifications {
         prefix: String,
         weeklyUsed: Int
     ): String {
+        val selectedPctKey = if (weeklyUsed >= 100) "${prefix}weekly_pct" else "${prefix}session_pct"
+        val selectedResetKey = if (weeklyUsed >= 100) "${prefix}weekly_reset" else "${prefix}session_reset"
+        val selectedPct = prefs.getString(selectedPctKey, null)
+        val selectedReset = prefs.getString(selectedResetKey, null)
+
+        // Never cover a genuine service state with an old/stale timestamp.
+        if (selectedPct == "Error" || selectedReset == "Error") return "Error"
+        if (selectedReset == "Unknown") return "Unknown"
+
         val resetEpochMs = nextResetEpochMs(prefs, prefix, weeklyUsed)
-        if (resetEpochMs <= 0L) return "Refresh needed"
+        if (resetEpochMs <= 0L) {
+            return when (selectedReset) {
+                "No limit" -> "No limit"
+                "Resets now" -> "Resets now"
+                else -> "Refresh needed"
+            }
+        }
 
         val zone = ZoneId.systemDefault()
         val reset = Instant.ofEpochMilli(resetEpochMs).atZone(zone)

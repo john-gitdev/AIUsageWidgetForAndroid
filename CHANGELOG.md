@@ -17,6 +17,27 @@ signing certificate, so installing 1.0.9 over an older build fails until the old
 removed. Uninstalling clears app data, so you will need to sign in to Claude and ChatGPT
 again — once.
 
+## [1.1.6] - 2026-09-29
+
+### Changed
+- **Weekly exhaustion now controls the session reset display.** For both Claude and ChatGPT, when
+  weekly usage reaches 100%, the session reset row mirrors the weekly reset countdown/timestamp
+  instead of showing an otherwise-irrelevant session-window reset. This keeps both rows focused on
+  the next reset that can actually restore usable quota.
+- **`Ready` still applies only while weekly quota remains.** With weekly capacity available, a fresh
+  0%-used session continues to show `Ready`; genuine `Unknown` and `Error` states remain unchanged.
+
+## [1.1.5] - 2026-09-29
+
+### Changed
+- **Fresh unused session windows now show `Ready`.** For both Claude and ChatGPT, when session
+  usage is 0%, weekly quota is still available, and the service supplied a valid session reset,
+  the session reset row shows `Ready` instead of a countdown such as `Resets in 4h 59m`.
+- **Unknown and error states stay explicit.** A missing or unparseable reset remains `Unknown`
+  rather than being converted to `Ready`. Failed refreshes show `Error`, clear stale reset
+  timestamps, and quota notifications show `Next Reset: Error` or `Next Reset: Unknown` instead
+  of continuing to display an old reset time.
+
 ## [1.1.4] - 2026-09-28
 
 ### Changed
@@ -207,6 +228,8 @@ Updates after this one will not need any of that.
 
 Initial release.
 
+[1.1.6]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.5...v1.1.6
+[1.1.5]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.1...v1.1.2

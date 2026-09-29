@@ -249,8 +249,10 @@ class MainActivity : AppCompatActivity() {
         val name = serviceName(currentTab)
         val prefix = keyPrefix(currentTab)
         val failed = sharedPrefs.getString("${prefix}session_pct", "--") == "Error"
-        // Error messages are written for the widget ("Session expired — tap to log in"), so drop the tap hint
-        val reason = (sharedPrefs.getString("${prefix}session_reset", null) ?: "").substringBefore(" — ")
+        // Reset rows show the concise state ("Error"). Keep the actionable error reason separately
+        // so this screen can still explain whether the session expired or the server failed.
+        val errorKey = if (currentTab == "chatgpt") "chatgpt_error_message" else "claude_error_message"
+        val reason = (sharedPrefs.getString(errorKey, null) ?: "Error").substringBefore(" — ")
 
         val icon = findViewById<TextView>(R.id.tv_success_icon)
         val title = findViewById<TextView>(R.id.tv_success_title)
@@ -831,6 +833,7 @@ class MainActivity : AppCompatActivity() {
                 .remove("${prefix}session_reset")
                 .remove("${prefix}weekly_pct")
                 .remove("${prefix}weekly_reset")
+                .remove(if (browser.service == "chatgpt") "chatgpt_error_message" else "claude_error_message")
         }
         editor.apply()
         CookieManager.getInstance().flush()
