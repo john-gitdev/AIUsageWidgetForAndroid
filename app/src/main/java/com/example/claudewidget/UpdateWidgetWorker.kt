@@ -386,6 +386,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             var sessionProg = 0
             var sessionReset = "No limit"
             var sessionResetEpochMs = 0L
+            var sessionLimitPresent = false
             var weeklyPct = "0% used"
             var weeklyProg = 0
             var weeklyReset = "No limit"
@@ -399,6 +400,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
                     val resetsAt = limit.optString("resets_at", "")
 
                     if (group == "session") {
+                        sessionLimitPresent = true
                         sessionProg = percent
                         sessionPct = "$percent% used"
                         sessionReset = formatResetTime(resetsAt)
@@ -419,7 +421,9 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             if (weeklyProg >= 100) {
                 sessionReset = weeklyReset
                 sessionResetEpochMs = weeklyResetEpochMs
-            } else if (sessionProg == 0 && sessionResetEpochMs > 0L) {
+            } else if (sessionLimitPresent && sessionProg == 0) {
+                // Claude may explicitly report a fresh 0%-used session while omitting resets_at.
+                // The usage state is still known: the user can use the session now.
                 sessionReset = "Ready"
             }
 
@@ -512,6 +516,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             var sessionProg = 0
             var sessionReset = "No limit"
             var sessionResetEpochMs = 0L
+            var sessionLimitPresent = false
             var weeklyPct = "0% used"
             var weeklyProg = 0
             var weeklyReset = "No limit"
@@ -520,6 +525,7 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             if (rateLimit != null) {
                 val primary = rateLimit.optJSONObject("primary_window")
                 if (primary != null) {
+                    sessionLimitPresent = true
                     sessionProg = primary.optInt("used_percent", 0)
                     sessionPct = "$sessionProg% used"
                     val resetAt = primary.optLong("reset_at", 0L)
@@ -545,7 +551,8 @@ class UpdateWidgetWorker(appContext: Context, workerParams: WorkerParameters) :
             if (weeklyProg >= 100) {
                 sessionReset = weeklyReset
                 sessionResetEpochMs = weeklyResetEpochMs
-            } else if (sessionProg == 0 && sessionResetEpochMs > 0L) {
+            } else if (sessionLimitPresent && sessionProg == 0) {
+                // A present 0%-used window is usable now even if a reset timestamp is omitted.
                 sessionReset = "Ready"
             }
 

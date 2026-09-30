@@ -101,7 +101,7 @@ object QuotaNotifications {
         val sessionReset = prefs.getString("${prefix}session_reset", "Tap refresh") ?: "Tap refresh"
         val weeklyReset = prefs.getString("${prefix}weekly_reset", "Tap refresh") ?: "Tap refresh"
         val name = if (service == "chatgpt") "ChatGPT" else "Claude"
-        val nextReset = nextResetLabel(prefs, prefix, weeklyUsed)
+        val title = notificationTitle(prefs, prefix, weeklyUsed, name)
 
         val compact = "Session $sessionText · Weekly $weeklyText"
         val expanded = buildString {
@@ -113,7 +113,7 @@ object QuotaNotifications {
         NotificationManagerCompat.from(context).notify(
             notificationId(service),
             baseBuilder(context, service)
-                .setContentTitle("$name - Next Reset: $nextReset")
+                .setContentTitle(title)
                 .setContentText(compact)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(expanded))
                 .build()
@@ -130,14 +130,27 @@ object QuotaNotifications {
         val name = if (service == "chatgpt") "ChatGPT" else "Claude"
         val prefix = if (service == "chatgpt") "chatgpt_" else ""
         val weeklyUsed = prefs.getInt("${prefix}weekly_prog", 0)
-        val nextReset = nextResetLabel(prefs, prefix, weeklyUsed)
+        val title = notificationTitle(prefs, prefix, weeklyUsed, name)
         NotificationManagerCompat.from(context).notify(
             notificationId(service),
             baseBuilder(context, service)
-                .setContentTitle("$name - Next Reset: $nextReset")
+                .setContentTitle(title)
                 .setContentText("Refreshing quota…")
                 .build()
         )
+    }
+
+    private fun notificationTitle(
+        prefs: android.content.SharedPreferences,
+        prefix: String,
+        weeklyUsed: Int,
+        name: String
+    ): String {
+        // A fresh, unused session is already usable, so there is no meaningful reset to advertise.
+        if (weeklyUsed < 100 && prefs.getString("${prefix}session_reset", null) == "Ready") {
+            return "$name - Ready"
+        }
+        return "$name - Next Reset: ${nextResetLabel(prefs, prefix, weeklyUsed)}"
     }
 
     /**
@@ -163,6 +176,7 @@ object QuotaNotifications {
             return when (selectedReset) {
                 "No limit" -> "No limit"
                 "Resets now" -> "Resets now"
+                "Ready" -> "Ready"
                 else -> "Refresh needed"
             }
         }
@@ -194,6 +208,7 @@ object QuotaNotifications {
         if (!isLoggedIn(prefs, service)) return false
         val prefix = if (service == "chatgpt") "chatgpt_" else ""
         val weeklyUsed = prefs.getInt("${prefix}weekly_prog", 0)
+        if (weeklyUsed < 100 && prefs.getString("${prefix}session_reset", null) == "Ready") return false
         return nextResetEpochMs(prefs, prefix, weeklyUsed) <= 0L
     }
 

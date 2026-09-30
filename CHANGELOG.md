@@ -17,6 +17,18 @@ signing certificate, so installing 1.0.9 over an older build fails until the old
 removed. Uninstalling clears app data, so you will need to sign in to Claude and ChatGPT
 again — once.
 
+## [1.1.7] - 2026-09-29
+
+### Fixed
+- **Claude fresh sessions no longer show `Unknown` just because `resets_at` is omitted.** If the
+  Claude usage response explicitly contains a session limit at 0% used and weekly quota remains,
+  the session row now shows `Ready` even when Claude does not provide a session reset timestamp.
+- **The same explicit-window rule is used for ChatGPT.** A present 0%-used primary window is
+  `Ready`; a genuinely absent/indeterminate session window is not silently treated as ready.
+- **Notification reset time remains honest when the timestamp is missing.** If the widget is
+  `Ready` but the service did not supply a reset timestamp, the notification's `Next Reset` value
+  is `Unknown` rather than inventing a time.
+
 ## [1.1.6] - 2026-09-29
 
 ### Changed
@@ -228,6 +240,7 @@ Updates after this one will not need any of that.
 
 Initial release.
 
+[1.1.7]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/john-gitdev/AIUsageWidgetForAndroid/compare/v1.1.3...v1.1.4
